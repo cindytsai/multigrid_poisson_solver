@@ -1,1 +1,1 @@
-# multigrid_poisson_solver
+# Multigrid Poisson Solver
