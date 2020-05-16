@@ -7,13 +7,13 @@ cycle = 1D-array = {-1 , -1, 0, 1, 1}</br>
 
 ### V-cycle / W-cycle
 for i in cycle:</br>
-    if(cycle[i] == -1): doRestriction</br>
-    if(cycle[i] ==  0): doExactSolver</br>
-    if(cycle[i] ==  1): doProlongation</br>
+&nbsp;if(cycle[i] == -1): doRestriction</br>
+&nbsp;if(cycle[i] ==  0): doExactSolver</br>
+&nbsp;if(cycle[i] ==  1): doProlongation</br>
 
 ### FMG
 while():</br>
-    triggers:</br>
+&nbsp;triggers:</br>
 
 ## Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
