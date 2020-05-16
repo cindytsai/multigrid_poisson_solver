@@ -1,19 +1,19 @@
 # Multigrid Poisson Solver
 
 ## Structure
-phi = ...
-N = ..
-cycle = 1D-array = {-1 , -1, 0, 1, 1}
+phi = ... </br>
+N = ..</br>
+cycle = 1D-array = {-1 , -1, 0, 1, 1}</br>
 
 ### V-cycle / W-cycle
-for i in cycle:
-    if(cycle[i] == -1): doRestriction
-    if(cycle[i] ==  0): doExactSolver
-    if(cycle[i] ==  1): doProlongation
+for i in cycle:</br>
+    if(cycle[i] == -1): doRestriction</br>
+    if(cycle[i] ==  0): doExactSolver</br>
+    if(cycle[i] ==  1): doProlongation</br>
 
 ### FMG
-while():
-    triggers:
+while():</br>
+    triggers:</br>
 
 ## Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
