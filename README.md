@@ -1,6 +1,9 @@
 # Multigrid Poisson Solver
 Specified on Laplacian Operator.
 
+## Basic Notation
+_Missing a notation table_
+
 ## Structure
 phi = ... </br>
 N = ..</br>
@@ -23,33 +26,40 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void getResidual: Get the residual d = Lu - f
 * Input Variable
   * Grid size: `int N`
-  * 
+  * Approximate solution [1D-array address]: `double *U`
+  * Source f [1D-array address]: `double *F`
+  * Residual d [1D-array address]: `dobule *D`
 
 ### Smoothing
-* void doSmoothing: Change made inside `double *phi`
+* void doSmoothing: Change made inside `double *U`
 * Input Variable
   * Grid size: `int N`
-  * 1D-array address: `double *phi`
+  * Approximate solution [1D-array address]: `double *U`
+  * Source f [1D-array address]: `double *F`
   * Steps: `int step`
 
 ### Exact Solver
-* void doExactSolver: Change made inside `double *phi`
+* void doExactSolver: Change made inside `double *U`
 * Input Variable
   * Grid size: `int N`
-  * 1D-array address: `double *phi`
+  * Approximation solution [1D-array address]: `double *U`
+  * Souce f [1D-array address]: `double *F`
+  * Target error: `double target_error`
+    * If `target_error < 0`: use Inverse Matrix to solve
+    * If `target_error > 0`: use Gauss-Seidel, with even / odd method
 
 ### Restriction
-* void doRestriction: Change made inside `int *M` and `double *R_phi`
+* void doRestriction: Change made inside `int *M` and `double *U_c`
 * Input Variable
   * Grid size: `int N`
-  * 1D-array address: `double *phi`
+  * To be restrict [1D-array address]: `double *U_f`
   * Grid size (h/2): `int *M`
-  * 1D-array address: `double *R_phi`
+  * After restriction[1D-array address]: `double *U_c`
 
 ### Prolongation
-* void doProlongation: Change made inside `int *M` and `double *P_phi`
+* void doProlongation: Change made inside `int *M` and `double *U_f`
 * Input Variable
   * Grid size (h): `int N`
-  * 1D-array address: `double *phi`
+  * To be prolongate [1D-array address]: `double *U_c`
   * Grid size (h/2): `int *M`
-  * 1D-array address: `double *P_phi`
+  * After prolongation [1D-array address]: `double *U_f`
