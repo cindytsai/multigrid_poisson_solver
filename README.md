@@ -1,4 +1,5 @@
 # Multigrid Poisson Solver
+Specified on Laplacian Operator.
 
 ## Structure
 phi = ... </br>
@@ -18,11 +19,18 @@ while():</br>
 ## Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
 
+### Residual
+* void getResidual: Get the residual d = Lu - f
+* Input Variable
+  * Grid size: `int N`
+  * 
+
 ### Smoothing
 * void doSmoothing: Change made inside `double *phi`
 * Input Variable
   * Grid size: `int N`
   * 1D-array address: `double *phi`
+  * Steps: `int step`
 
 ### Exact Solver
 * void doExactSolver: Change made inside `double *phi`
