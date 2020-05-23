@@ -38,6 +38,15 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   * x minimum range: `double min_x`
   * y minimum range: `double min_y`
 
+### Boundary
+* void getBoundary: Get the discretize form of the boundary of size N x N, only the boundary are setted, the others are 0.
+* Input Variable:
+  * Grid size: `int N`
+  * L: `double`
+  * Boundary [1D-array address]: `double *F`
+  * x minimum range: `double min_x`
+  * y minimum range: `double min_y`
+
 ### Residual
 * void getResidual: Get the residual d = Lu - f
 * Input Variable

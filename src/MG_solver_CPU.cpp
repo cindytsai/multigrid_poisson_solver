@@ -7,12 +7,13 @@
 /*
 For problem to be solved
  */
-
+void getSource(int, double, double*, double, double);
+void getBoundary(int, double, double*, double, double);
 /*
 MultiGrid Functions
  */
 void getResidual(int, double, double*, double*, double*);
-void getSource(int, double, double*, double, double);
+
 void doSmoothing(int, double, double*, double*, int);
 void doExactSolver(int, double, double*, double*, double);
 void doRestriction(int, double*, int, double*);
