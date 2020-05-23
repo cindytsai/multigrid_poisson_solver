@@ -28,6 +28,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void getResidual: Get the residual d = Lu - f
 * Input Variable
   * Grid size: `int N`
+  * L: `double L`
   * Approximate solution [1D-array address]: `double *U`
   * Source f [1D-array address]: `double *F`
   * Residual d [1D-array address]: `dobule *D`
@@ -36,6 +37,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void doSmoothing: Change made inside `double *U`
 * Input Variable
   * Grid size: `int N`
+  * L: `double L`
   * Approximate solution [1D-array address]: `double *U`
   * Source f [1D-array address]: `double *F`
   * Steps: `int step`
@@ -44,6 +46,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void doExactSolver: Change made inside `double *U`
 * Input Variable
   * Grid size: `int N`
+  * L: `double L`
   * Approximation solution [1D-array address]: `double *U`
   * Souce f [1D-array address]: `double *F`
   * Target error: `double target_error`

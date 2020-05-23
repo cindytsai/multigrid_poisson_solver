@@ -11,9 +11,9 @@ For problem to be solved
 /*
 MultiGrid Functions
  */
-void getResidual(int, double*, double*, double*);
-void doSmoothing(int, double*, double*, int);
-void doExactSolver(int, double*, double*, double);
+void getResidual(int, double, double*, double*, double*);
+void doSmoothing(int, double, double*, double*, int);
+void doExactSolver(int, double, double*, double*, double);
 void doRestriction(int, double*, int, double*);
 void doProlongation(int, double*, int, double*);
 
