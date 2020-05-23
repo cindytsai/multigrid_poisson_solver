@@ -2,9 +2,14 @@
 Specified on Laplacian Operator.
 
 ## Basic Notation
-_Missing a notation table_
 Suppose the interest region is a square only.
-L : Width of the interest region.
+
+| Variable Name |                 Definition                |            Type            |
+|:-------------:|:-----------------------------------------:|:--------------------------:|
+|       L       | Width of the interest region.             |           double           |
+|       U       | Approximate solution of size N x N.       | double*, 1-D array address |
+|       F       | Discretize source function to size N x N. | double*, 1-D array address |
+|       D       | Residual of size N x N.                   | double*, 1-D array address |
 
 ## Structure
 phi = ... </br>
@@ -23,6 +28,12 @@ while():</br>
 
 ## Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
+
+### Source
+* void getSource: Get the discretize form of the source function of size N x N.
+* Input Variable:
+  * Grid size: `int N`
+  *
 
 ### Residual
 * void getResidual: Get the residual d = Lu - f
