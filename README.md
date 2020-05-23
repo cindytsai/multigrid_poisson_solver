@@ -33,7 +33,10 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void getSource: Get the discretize form of the source function of size N x N.
 * Input Variable:
   * Grid size: `int N`
-  *
+  * L: `double`
+  * Source f [1D-array address]: `double *F`
+  * x minimum range: `double min_x`
+  * y minimum range: `double min_y`
 
 ### Residual
 * void getResidual: Get the residual d = Lu - f
