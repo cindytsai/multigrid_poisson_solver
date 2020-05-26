@@ -73,9 +73,9 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   * Approximation solution [1D-array address]: `double *U`
   * Souce f [1D-array address]: `double *F`
   * Target error: `double target_error`
-    * If `target_error < 0`: use Inverse Matrix to solve
-    * If `target_error > 0`: use Gauss-Seidel, with even / odd method
   * Solver options: `int option`
+    * `option == 0`: use Inverse Matrix
+    * `option == 1`: use Gauss-Seidel, with even/odd method.
 
 ### Restriction
 * void doRestriction: Change made inside `double *U_c`
