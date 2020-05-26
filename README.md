@@ -33,7 +33,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void getSource: Get the discretize form of the source function of size N x N.
 * Input Variable:
   * Grid size: `int N`
-  * L: `double`
+  * L: `double L`
   * Source f [1D-array address]: `double *F`
   * x minimum range: `double min_x`
   * y minimum range: `double min_y`
@@ -42,7 +42,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void getBoundary: Get the discretize form of the boundary of size N x N, only the boundary are setted, the others are 0.
 * Input Variable:
   * Grid size: `int N`
-  * L: `double`
+  * L: `double L`
   * Boundary [1D-array address]: `double *F`
   * x minimum range: `double min_x`
   * y minimum range: `double min_y`
@@ -75,6 +75,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   * Target error: `double target_error`
     * If `target_error < 0`: use Inverse Matrix to solve
     * If `target_error > 0`: use Gauss-Seidel, with even / odd method
+  * Solver options: `int option`
 
 ### Restriction
 * void doRestriction: Change made inside `double *U_c`
