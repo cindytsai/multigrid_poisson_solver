@@ -1,6 +1,11 @@
 # Multigrid Poisson Solver
 Specified on Laplacian Operator.
 
+## Things to do
+- [ ] Merge the code.
+- [ ] Check can it converges, if not, try on the restriction method that the grid values conserve.
+- [ ] Create a link list data structure, to control and record the workflow and the memory usage.
+
 ## Basic Notation
 Suppose the interest region is a square only.
 
@@ -81,6 +86,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void InverseMatrix: Calculate the Inverse Matrix of the current discretized Laplacian, and do the multiplication to get the answer `double *U`.
 * Input Variable:
   * Grid size: `int N`
+  * Interest region length L: `double L`
   * Exact solution [1D-array address]: `double *U`
   * Source Term f [1D-array address]: `double *F`
 
@@ -102,8 +108,6 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   * After restriction[1D-array address]: `double *U_c`
 * Notes:
   1. Restriction is specific on residual, and since we only don't do relaxation on the boundary, so the boundary of restriction target grid is always "0".
-* **TODO:**
-  - [ ] Check can it converges, if not, try on the method that the grid values conserve.
 
 ### Prolongation
 * void doProlongation: Change made inside `double *U_f`
