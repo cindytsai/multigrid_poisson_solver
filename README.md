@@ -86,8 +86,8 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * void InverseMatrix: Calculate the Inverse Matrix of the current discretized Laplacian, and do the multiplication to get the answer `double *U`.
 * Input Variable:
   * Grid size: `int N`
-  * Interest region length L: `double L`
-  * Exact solution [1D-array address]: `double *U`
+  * Interest region length L: `double Length`
+  * Exact solution [1D-array address]: `double *X`
   * Source Term f [1D-array address]: `double *F`
 
 #### Gauss-Seidel Relaxation Method
