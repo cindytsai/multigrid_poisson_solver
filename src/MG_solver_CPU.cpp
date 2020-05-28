@@ -1,8 +1,11 @@
 #include <cstdio>
 #include <cstdlib>
+#include <stdio.h> 
+#include <stdlib.h> 
 #include <omp.h>
 #include <math.h>
 #include <cstring>
+#include <assert.h>
 
 /*
 For problem to be solved
@@ -26,7 +29,7 @@ void GaussSeidel(int, double, double*, double*, double);
 
 
 int main(){
-	/*
+    /*
 	Settings
 	cycle: The cycle
 	N:     Grid size
@@ -35,21 +38,18 @@ int main(){
 	// int N;
 	// int L;
 	
-	/*
+    /*
 	Main MultiGrid Solver
 	 */
 	// for(int i = 0; i < cycle.length; i = i+1){
 
 	// }
-
-	return 0;
+    return 0; 
 }
-
 
 /*
 For the problem to be solved
  */
-
 // Get the source f of the problem Lu = f
 void getSource(int N, double L, double *F, double min_x, double min_y){
 
@@ -95,6 +95,33 @@ void getBoundary(int N, double L, double *F, double min_x, double min_y){
 /*
 MultiGrid Functions
  */
+// Main Function
+void getResidual(int N, double L, double* U, double* F, double* D){
+	double dx=L/(double) (N-1);
+	for(int i=0; i<N; i++){
+		for(int j=0; j<N; j++){
+			if (i==0 or j==0 or j==N-1)  *(D+i*N+j)=0.0;
+			else  *(D+i*N+j) =  *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j);
+		}
+	}
+
+}
+
+void doSmoothing(int N, double L, double* U, double* F, int step){
+	double dx=L/(double) (N-1);
+	double delta;
+	//Gauss-Seidel
+	for(int s=0; s<step; s++){
+		for(int i=1; i<N-1; i++){
+			for(int j=1; j<N-1; j++){
+				delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+		        *(U+i*N+j) += delta;
+			}
+		}
+	}
+	
+}
+
 void doExactSolver(int N, double L, double *U, double *F, double target_error, int option){
 
 	// // Inverse Matrix
@@ -148,6 +175,62 @@ void doRestriction(int N, double *U_f, int M, double *U_c){
 
 }
 
+void doProlongation(int N, double* U_c, int M, double* U_f){
+	double L = 1.0;
+	double c_dx = L / (double) (N-1), f_dx = L/(double) (M-1);
+	double ratio = c_dx/f_dx;
+
+	for(int i=0; i<N-1; i++){
+		for(int j=0; j<N-1; j++){
+			double c1x = j*c_dx, c1y = i*c_dx;
+			double c2x = c1x+c_dx, c2y = c1y;
+			double c3x = c1x, c3y = c1y+c_dx;
+			double c4x = c2x, c4y = c3y;
+			double c1 = *(U_c + i*N + j), c2 = *(U_c + i*N + j+1);
+			double c3 = *(U_c + (i+1)*N + j), c4 = *(U_c + (i+1)*N +j+1);
+			
+			for(int k=ceil(i*ratio); k<ceil((i+1)*ratio); k++){
+				for(int l=ceil(j*ratio); l<ceil((j+1)*ratio); l++){
+					double f_x = l*f_dx, f_y =k*f_dx;
+
+					assert(c2x - f_x >= 0);
+					assert(f_x - c1x >= 0);
+					assert(c4x - f_x >= 0);
+					assert(f_x - c3x >= 0);
+					assert(c3y - f_y >= 0);
+					assert(f_y - c1y >= 0);
+					*(U_f + k*M + l) = ((c1*(c2x - f_x) + c2*(f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
+					if (l==M-2){
+						f_x = L;
+						*(U_f+ k*M + M-1) = ((c1 * (c2x - f_x) + c2 * (f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
+					}
+
+				}
+				if(k==M-2){
+					k=M-1;
+					double f_x = 0, f_y = L;
+					for(int l=ceil(j*ratio); l<ceil((j+1)*ratio); l++){
+						f_x = l*f_dx;
+						f_y = k*f_dx;
+						assert(c2x - f_x >= 0);
+						assert(f_x - c1x >= 0);
+						assert(c4x - f_x >= 0);
+						assert(f_x - c3x >= 0);
+						assert(c3y - f_y >= 0);
+						assert(f_y - c1y >= 0);
+						*(U_f + (M-1)* M + l) = ((c1 * (c2x - f_x) + c2 * (f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
+						if (l==M-2){
+							f_x = L;
+							*(U_f+ k*M + M-1) = ((c1 * (c2x - f_x) + c2 * (f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
+						}
+					}
+				}	
+			}
+			
+		}
+	}
+}
+
 void doPrint(int N, double *U){
 	for(int j = N-1; j >= 0; j = j-1){
 		for(int i = 0; i < N; i = i+1){
@@ -157,6 +240,7 @@ void doPrint(int N, double *U){
 	}
 }
 
+// Sub Routine
 void InverseMatrix(int N, double Length, double *X, double *F){
 	/*
 	Settings and Initialization
@@ -472,3 +556,5 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	free(U_old);
 	free(Residual);
 }
+
+
