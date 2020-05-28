@@ -2,7 +2,7 @@
 Specified on Laplacian Operator.
 
 ## Things to do
-- [ ] Merge the code.
+- [x] Merge the code.
 - [ ] Check can it converges, if not, try on the restriction method that the grid values conserve.
 - [ ] Create a link list data structure, to control and record the workflow and the memory usage.
 
