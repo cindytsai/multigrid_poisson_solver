@@ -21,7 +21,7 @@ void doProlongation(int, double*, int, double*);
 void doPrint(int, double*);
 
 // Sub Routine
-void InverseMatrix(int, double*, double*);
+void InverseMatrix(int, double, double*, double*);
 void GaussSeidel(int, double, double*, double*, double);
 
 
@@ -41,25 +41,6 @@ int main(){
 	// for(int i = 0; i < cycle.length; i = i+1){
 
 	// }
-	
-	/*
-	Testing getSource, GaussSeidel
-	 */
-	int N = 18;
-	double L = 1.0;
-	double target_error = 1e-10;
-	double *U, *F;
-	U = (double*) malloc(N * N * sizeof(double));
-	F = (double*) malloc(N * N * sizeof(double));
-
-	getSource(N, L, F, 0.0, 0.0);
-	doPrint(N, F);
-	GaussSeidel(N, L, U, F, target_error);
-	doPrint(N, U);
-
-	free(U);
-	free(F);
-
 
 	return 0;
 }
@@ -95,7 +76,7 @@ void getBoundary(int N, double L, double *F, double min_x, double min_y){
 	double x, y;
 	int index;
 
-	memset(F, 0, N * N);
+	memset(F, 0.0, N * N * sizeof(double));
 
 	for(int ix = 0; ix < N; ix = ix+1){
 		// Bottom boundary
@@ -138,7 +119,7 @@ void doRestriction(int N, double *U_f, int M, double *U_c){
 	double h_c = 1.0 / (double)(M - 1);			// the delta x of the discretized coarse grid.
 
 	// Initialize Coarse Grid, set 0 to all
-	memset(U_c, 0, M * M * sizeof(double));
+	memset(U_c, 0.0, M * M * sizeof(double));
 
 	// Run through the coarse grid and do restriction, 
 	// but without the boundary, since it is all "0"
@@ -176,20 +157,196 @@ void doPrint(int N, double *U){
 	}
 }
 
-void InverseMatrix(int N, double *U, double *F){
+void InverseMatrix(int N, double Length, double *X, double *F){
+	/*
+	Settings and Initialization
+	 */
+	double lu_sum;						// For calculating LU-decomposition
+	int swap_row, check_row, flag;
+
+	double sum;							// For solving Ax = b
+
+	double h = Length / (double) (N - 1); 	// delta x of discretized grid
+	double h2 = pow(h, 2);				// h ** 2
+	int index;							// Index of the 1D-array U (Discretize grid)
+	int l, r, t, b;						// Index of the neighboring in 1D-array U (Discretize grid)
+	int row;							// Row of the Laplacian Matrix
+	double *A;							// Discretized Laplacian operator Matrix form.
+	double *L, *U;						// For LU-decomposition , PA = LU
+	int *P;
+	double *Z;							// Solve for Ax = b -> LUx = b -> z = Ux, Lz = b
+	int MatrixSize = N * N;
+	
+	A = (double*) malloc(MatrixSize * MatrixSize * sizeof(double));
+	L = (double*) malloc(MatrixSize * MatrixSize * sizeof(double));
+	U = (double*) malloc(MatrixSize * MatrixSize * sizeof(double));
+	P = (int*) malloc(MatrixSize * sizeof(int));
+	Z = (double*) malloc(MatrixSize * sizeof(double));
+
+	memset(A, 0.0, MatrixSize * MatrixSize * sizeof(double));
+	memset(L, 0.0, MatrixSize * MatrixSize * sizeof(double));
+	memset(U, 0.0, MatrixSize * MatrixSize * sizeof(double));
+	memset(P, 0.0, MatrixSize * sizeof(int));
+	memset(X, 0.0, MatrixSize * sizeof(double));
+	memset(Z, 0.0, MatrixSize * sizeof(double));
+	
+	// Set the diagonal of U as 1
+	// Set Permutation P equal to its own index from each row
+	for(int i = 0; i < MatrixSize; i = i+1){
+		for(int j = 0; j < MatrixSize; j = j+1){
+			if( i == j){
+				U[i * MatrixSize + j] = 1.0;
+			}
+		}
+		P[i] = i;
+	}
 
 	/*
-	Create the Laplacian Operator
+	Create the Laplacian Operator A_mn
+	m -> row, n -> column, same indexing as the ordinary matrix.
+	For each grid points, corresponds to one Laplacian Matrix A row.
 	 */
+	row = 0;	// Start from 0th-row of Laplacian Matrix A
+	for(int j = 0; j < N; j = j+1){
+		for(int i = 0; i < N; i = i+1){
+			
+			if( i == 0 || i == N-1 || j == 0 || j == N-1){
+				// Boundary after laplacian Matrix is itself -> Set as 1
+				index = i + N * j;
+				A[index + row * MatrixSize] = 1.0;
+			}
+			else{
+				// Others
+				index = i + N * j;
+				l = index - 1;
+				r = index + 1;
+				t = index + N;
+				b = index - N;
+				A[index + row * MatrixSize] = -4.0 / h2;
+				A[l + row * MatrixSize] = 1.0 / h2;
+				A[r + row * MatrixSize] = 1.0 / h2;
+				A[t + row * MatrixSize] = 1.0 / h2;
+				A[b + row * MatrixSize] = 1.0 / h2;
+			}
+
+			// Go to next row in Laplacian Matrix A
+			row = row + 1;
+		}
+	}
+
+	printf("----Laplacian Matrix----\n");
+	doPrint(MatrixSize, A);
 	
 	/*
-	Calculate the inverse Laplacian Operator
+	Do the LU-decomposition of Laplacian Operator A
+	PA = LU
 	 */
+	flag = 0;
+	check_row = 0;
+	swap_row = check_row + 1;
+
+	do{
+		for(int k = 0; k < MatrixSize; k = k+1){
+			
+			// Compute L
+			for(int i = k; i < MatrixSize; i = i+1){
+				
+				// Compute L_ik
+				lu_sum = 0.0;
+				for(int j = 0; j < k; j = j+1){
+					lu_sum = lu_sum + L[MatrixSize*i+j] * U[MatrixSize*j+k];
+				}
+				L[MatrixSize*i+k] = A[P[i]*MatrixSize+k] - lu_sum;
+			
+
+				// Check if L[i][i] == 0.0, if so, swap row i with row below i ( swap_row > i )
+				if(i == k && L[i*MatrixSize+k] == 0.0){
+					
+					if(swap_row >= MatrixSize){
+						// Which is impossible in Laplacian Matrix :)
+						printf("Having Zero Pivote ! det(A) = 0\n");
+						flag = 0;
+					}
+					else{
+						P[i] = swap_row;
+						P[swap_row] = i;
+						flag = 1;
+					}
+					swap_row = swap_row + 1;
+					break;
+				}
+	
+				if(i == k && L[i*MatrixSize+k] != 0.0){
+					check_row = check_row + 1;
+					swap_row = check_row + 1;
+					flag = 0;
+				}
+			}
+
+			if(flag == 1) break;
+
+			// Compute U
+			for(int j = k; j < MatrixSize; j = j+1){
+				lu_sum = 0.0;
+				for(int i = 0; i < k; i = i+1){
+					lu_sum = lu_sum + L[k*MatrixSize+i] * U[i*MatrixSize+j];
+				}
+				U[k*MatrixSize+j] = (1.0 / L[k*MatrixSize+k]) * (A[P[k]*MatrixSize+j] - lu_sum);
+			}
+		}
+
+	}while(flag != 0);
+
+	printf("----L----\n");
+	doPrint(MatrixSize, L);
+	printf("----U----\n");
+	doPrint(MatrixSize, U);
+	printf("----P----\n");
+	for(int i = 0; i < MatrixSize; i = i+1){
+		printf("%d\n", P[i]);
+	}
 	
 	/*
-	Matrix Multiplication
-	 */
+	Solve for U, where LU = F or Ax = b equation
+	Ax = b and PA = LU
+	LUx = b;
+	Lz = b; 
+	*/
 	
+	// Solve for Z
+	for(int i = 0; i < MatrixSize; i = i+1){
+		sum = 0.0;
+		for(int k = 0; k < i; k = k+1){
+			sum = sum + L[i*MatrixSize+k] * Z[k];
+		}
+		Z[i] = (1.0 / L[i*MatrixSize+i]) * (F[i] - sum);
+	}
+
+	// Solve for X
+	for(int i = MatrixSize-1; i >= 0; i = i-1){
+		sum = 0.0;
+		for(int k = i+1; k < MatrixSize; k = k+1){
+			sum = sum + U[i*MatrixSize+k] * X[k];
+		}
+		X[i] = Z[i] - sum;
+	}
+
+	printf("CHECK INVERSE METHOD\n");
+	for(int i = 0; i < MatrixSize; i = i+1){
+		sum = 0.0;
+		for(int j = 0; j < MatrixSize; j = j+1){
+			sum = sum + A[i*MatrixSize+j] * X[j];
+		}
+		printf("%lf\n", sum - F[i]);
+	}
+	
+	
+	// Free the temperary resource
+	free(A);
+	free(U);
+	free(L);
+	free(P);
+	free(Z);
 }
 
 void GaussSeidel(int N, double L, double *U, double *F, double target_error){
@@ -242,9 +399,8 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	}
 
 	// Initialize
-	memset(U_old, 0, sizeof(U_old));
-	memset(U, 0, sizeof(U));
-
+	memset(U_old, 0.0, N * N * sizeof(double));
+	memset(U, 0.0, N * N * sizeof(double));
 
 	// Start the Gauss-Seidel Iteration
 	while( err > target_error ){
