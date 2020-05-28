@@ -49,7 +49,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 
 ### Residual
 * void getResidual: Get the residual d = Lu - f
-* Input Variable
+* Input Variable:
   * Grid size: `int N`
   * Interest Region length L: `double L`
   * Approximate solution [1D-array address]: `double *U`
@@ -58,7 +58,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 
 ### Smoothing
 * void doSmoothing: Change made inside `double *U`
-* Input Variable
+* Input Variable:
   * Grid size: `int N`
   * Interest Region length L: `double L`
   * Approximate solution [1D-array address]: `double *U`
@@ -67,7 +67,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 
 ### Exact Solver
 * void doExactSolver: Change made inside `double *U`
-* Input Variable
+* Input Variable:
   * Grid size: `int N`
   * Interest Region length L: `double L`
   * Approximation solution [1D-array address]: `double *U`
@@ -79,7 +79,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 
 #### Inverse Matrix Method
 * void InverseMatrix: Calculate the Inverse Matrix of the current discretized Laplacian, and do the multiplication to get the answer `double *U`.
-* Input Variable
+* Input Variable:
   * Grid size: `int N`
   * Exact solution [1D-array address]: `double *U`
   * Source Term f [1D-array address]: `double *F`
@@ -95,7 +95,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 
 ### Restriction
 * void doRestriction: Change made inside `double *U_c`
-* Input Variable
+* Input Variable:
   * Grid size: `int N`
   * To be restrict [1D-array address]: `double *U_f`
   * Grid size: `int M`
@@ -105,8 +105,14 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 
 ### Prolongation
 * void doProlongation: Change made inside `double *U_f`
-* Input Variable
+* Input Variable:
   * Grid size: `int N`
   * To be prolongate [1D-array address]: `double *U_c`
   * Grid size: `int M`
   * After prolongation [1D-array address]: `double *U_f`
+
+### Print
+* void doPrint: Print out the grid, with the normal x-y coordinate.
+* Input Variable:
+  * Grid size: `int N`
+  * To be printed [1D-array address]: `double *U`
