@@ -21,6 +21,13 @@ phi = ... </br>
 N = ..</br>
 cycle = 1D-array = {-1 , -1, 0, 1, 1}</br>
 
+### Link List Data Structure
+
+#### Node
+* 
+
+#### Functions
+
 ### V-cycle / W-cycle
 for i in cycle:</br>
 &nbsp;if(cycle[i] == -1): doRestriction</br>
