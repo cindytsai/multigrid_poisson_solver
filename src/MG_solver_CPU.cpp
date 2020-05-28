@@ -43,34 +43,23 @@ int main(){
 	// }
 	
 	/*
-	Testing doRestriction
+	Testing getSource, GaussSeidel
 	 */
-	double *U_f, *U_c;
-	int N = 9;
-	int M = 5;
-	U_f = (double*) malloc(N * N * sizeof(double));
-	U_c = (double*) malloc(N * N * sizeof(double));
+	int N = 18;
+	double L = 1.0;
+	double target_error = 1e-10;
+	double *U, *F;
+	U = (double*) malloc(N * N * sizeof(double));
+	F = (double*) malloc(N * N * sizeof(double));
 
-	for(int j = 0; j < N; j = j+1){
-		for(int i = 0; i < N; i = i+1){
-			if( i == 0 || i == N-1 || j == 0 || j == N-1){
-				U_f[i+j*N] = 0.0;
-				continue;
-			}
-			U_f[i+j*N] = i + j;
-		}
-	}
+	getSource(N, L, F, 0.0, 0.0);
+	doPrint(N, F);
+	GaussSeidel(N, L, U, F, target_error);
+	doPrint(N, U);
 
-	doRestriction(N, U_f, M, U_c);
-	doPrint(N, U_f);
-	printf("--------------------\n");
-	doPrint(M, U_c);
-	printf("--------------------\n");
-	doRestriction(M, U_c, N, U_f);
-	doPrint(N, U_f);
+	free(U);
+	free(F);
 
-	free(U_f);
-	free(U_c);
 
 	return 0;
 }
@@ -127,7 +116,7 @@ MultiGrid Functions
  */
 void doExactSolver(int N, double L, double *U, double *F, double target_error, int option){
 
-	// Inverse Matrix
+	// // Inverse Matrix
 	// if(option == 0){
 	// 	InverseMatrix(N, U, F);
 	// }
@@ -185,4 +174,145 @@ void doPrint(int N, double *U){
 		}
 		printf("\n");
 	}
+}
+
+void InverseMatrix(int N, double *U, double *F){
+
+	/*
+	Create the Laplacian Operator
+	 */
+	
+	/*
+	Calculate the inverse Laplacian Operator
+	 */
+	
+	/*
+	Matrix Multiplication
+	 */
+	
+}
+
+void GaussSeidel(int N, double L, double *U, double *F, double target_error){
+	
+	double h = L / (double)(N - 1);
+	double err = target_error + 1.0;
+	int iter = 0;
+
+	int index, ix, iy;	// Index of the point to be update
+	int l, r, t, b;		// Index of the neighbers
+
+	int *fw, *bw;		// Record the forward and backward index of the index
+	int *ieven, *iodd;	// Index of even / odd chestbox
+	double *U_old;		// For storing U during iteration
+	double *Residual; 	// Get the residual to compute the error
+
+	/*
+	Prepared and initialize
+	 */
+	ieven = (int*) malloc(((N * N) / 2) * sizeof(int));
+	iodd  = (int*) malloc(((N * N) / 2) * sizeof(int));
+	fw = (int*) malloc(N * sizeof(int));
+	bw = (int*) malloc(N * sizeof(int));
+	U_old = (double*) malloc(N * N * sizeof(double));
+	Residual = (double*) malloc(N * N * sizeof(double));
+
+	// For even chestbox index
+	for(int i = 0; i < ((N * N) / 2); i = i+1){
+		int parity, ix, iy;
+		ix = (2 * i) % N;
+		iy = ((2 * i) / N) % N;
+		parity = (ix + iy) % 2;
+		ix = ix + parity;
+		ieven[i] = ix + iy * N;
+	}
+	// For odd chestbox index
+	for(int i = 0; i < ((N * N) / 2); i = i+1){
+		int parity, ix, iy;
+		ix = (2 * i) % N;
+		iy = ((2 * i) / N) % N;
+		parity = (ix + iy + 1) % 2;
+		ix = ix + parity;
+		iodd[i] = ix + iy * N;
+	}
+
+	// For forward and backward index
+	for(int i = 0; i < N; i = i+1){
+		fw[i] = (i + 1) % N;
+		bw[i] = (i - 1 + N) % N;
+	}
+
+	// Initialize
+	memset(U_old, 0, sizeof(U_old));
+	memset(U, 0, sizeof(U));
+
+
+	// Start the Gauss-Seidel Iteration
+	while( err > target_error ){
+		
+		// Update even chestbox
+		for(int i = 0; i < (N * N) / 2; i = i+1){
+			// Center index
+			index = ieven[i];
+			ix = index % N;
+			iy = index / N;
+
+			// Do not update the boundary
+			if((ix == 0) || (ix == (N-1)) || (iy == 0) || (iy == (N-1))){
+				continue;
+			}
+
+			// Neighboring index
+			l = bw[ix] + iy * N;
+			r = fw[ix] + iy * N;
+			t = ix + fw[iy] * N;
+			b = ix + bw[iy] * N;
+
+			// Update result to U
+			U[index] = 0.25 * (U_old[l] + U_old[r] + U_old[t] + U_old[b] - pow(h, 2) * F[index]);
+		}
+
+		// Update odd chestbox
+		for(int i = 0; i < (N * N) / 2; i = i+1){
+			// Center index
+			index = iodd[i];
+			ix = index % N;
+			iy = index / N;
+
+			// Do not update the boundary
+			if((ix == 0) || (ix == (N-1)) || (iy == 0) || (iy == (N-1))){
+				continue;
+			}
+
+			// Neighboring index
+			l = bw[ix] + iy * N;
+			r = fw[ix] + iy * N;
+			t = ix + fw[iy] * N;
+			b = ix + bw[iy] * N;
+
+			// Update result to U
+			U[index] = 0.25 * (U[l] + U[r] + U[t] + U[b] - pow(h, 2) * F[index]);			
+		}
+
+		// Compute the error, without the boundary, since it is always "0"
+		iter = iter + 1;
+		err = 0.0;
+		getResidual(N, L, U, F, Residual);
+		for(int j = 1; j < (N-1); j = j+1){
+			for(int i = 1; i < (N-1); i = i+1){
+				err = err + fabs(Residual[i+N*j]);
+			}
+		}
+		err = err / (double)((N - 2) * (N - 2));
+
+		// Move U to U_old and start the next iteration
+		memcpy(U_old, U, sizeof(double) * N * N);
+	}
+
+	// Free the temperary resource
+	free(fw);
+	free(bw);
+	free(ieven);
+	free(iodd);
+	free(U_old);
+	free(Residual);
 }
