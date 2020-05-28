@@ -74,6 +74,7 @@ int main(){
 
 */
 
+/*
 int main(){
 	int N=16;
 	double L=1.0;
@@ -110,8 +111,12 @@ int main(){
       
     	}
   	}
-}
 
+  	free(F);
+  	free(U);
+  	free(D);
+}
+*/
 
 void doProlongation(int N, double* U_c, int M, double* U_f){
 	double L = 1.0;
@@ -196,24 +201,6 @@ void getResidual(int N, double L, double* U, double* F, double* D){
 }
 
 
-// Get the source f of the problem Lu = f
-void getSource(int N, double L, double *F, double min_x, double min_y){
-
-	double h = L / (double) (N-1);
-	double x, y;
-	int index;
-
-	for(int iy = 0; iy < N; iy = iy+1){
-		for(int ix = 0; ix < N; ix = ix+1){
-			index = ix + N * iy;
-			x = (double)ix * h + min_x;
-			y = (double)iy * h + min_y;
-
-			// Source from the problem
-			F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);
-		}
-	}
-}
 /*
 Functions
  */
