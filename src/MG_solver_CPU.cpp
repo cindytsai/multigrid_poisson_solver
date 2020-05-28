@@ -124,15 +124,15 @@ void doSmoothing(int N, double L, double* U, double* F, int step){
 
 void doExactSolver(int N, double L, double *U, double *F, double target_error, int option){
 
-	// // Inverse Matrix
-	// if(option == 0){
-	// 	InverseMatrix(N, U, F);
-	// }
+	// Inverse Matrix
+	if(option == 0){
+		InverseMatrix(N, L, U, F);
+	}
 
-	// // Gauss-Seidel even / odd method
-	// if(option == 1){
-	// 	GaussSeidel(N, L, U, F, target_error);
-	// }
+	// Gauss-Seidel even / odd method
+	if(option == 1){
+		GaussSeidel(N, L, U, F, target_error);
+	}
 }
 
 void doRestriction(int N, double *U_f, int M, double *U_c){
@@ -161,7 +161,7 @@ void doRestriction(int N, double *U_f, int M, double *U_c){
 			b = 1.0 - a;
 			d = 1.0 - c;
 
-			// // Debug
+			// DEBUG info
 			// printf("ix_f = %d, iy_f = %d\n", ix_f, iy_f);
 			// printf("a = %.3lf, b = %.3lf\n", a, b);
 			// printf("c = %.3lf, d = %.3lf\n", c, d);
@@ -318,8 +318,9 @@ void InverseMatrix(int N, double Length, double *X, double *F){
 		}
 	}
 
-	printf("----Laplacian Matrix----\n");
-	doPrint(MatrixSize, A);
+	// DEBUG info
+	// printf("----Laplacian Matrix----\n");
+	// doPrint(MatrixSize, A);
 	
 	/*
 	Do the LU-decomposition of Laplacian Operator A
@@ -381,14 +382,15 @@ void InverseMatrix(int N, double Length, double *X, double *F){
 
 	}while(flag != 0);
 
-	printf("----L----\n");
-	doPrint(MatrixSize, L);
-	printf("----U----\n");
-	doPrint(MatrixSize, U);
-	printf("----P----\n");
-	for(int i = 0; i < MatrixSize; i = i+1){
-		printf("%d\n", P[i]);
-	}
+	// DEBUG info
+	// printf("----L----\n");
+	// doPrint(MatrixSize, L);
+	// printf("----U----\n");
+	// doPrint(MatrixSize, U);
+	// printf("----P----\n");
+	// for(int i = 0; i < MatrixSize; i = i+1){
+	// 	printf("%d\n", P[i]);
+	// }
 	
 	/*
 	Solve for U, where LU = F or Ax = b equation
@@ -415,14 +417,15 @@ void InverseMatrix(int N, double Length, double *X, double *F){
 		X[i] = Z[i] - sum;
 	}
 
-	printf("CHECK INVERSE METHOD\n");
-	for(int i = 0; i < MatrixSize; i = i+1){
-		sum = 0.0;
-		for(int j = 0; j < MatrixSize; j = j+1){
-			sum = sum + A[i*MatrixSize+j] * X[j];
-		}
-		printf("%lf\n", sum - F[i]);
-	}
+	// DEBUG info
+	// printf("CHECK INVERSE METHOD\n");
+	// for(int i = 0; i < MatrixSize; i = i+1){
+	// 	sum = 0.0;
+	// 	for(int j = 0; j < MatrixSize; j = j+1){
+	// 		sum = sum + A[i*MatrixSize+j] * X[j];
+	// 	}
+	// 	printf("%lf\n", sum - F[i]);
+	// }
 	
 	
 	// Free the temperary resource
