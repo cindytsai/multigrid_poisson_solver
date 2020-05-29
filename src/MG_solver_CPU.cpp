@@ -76,6 +76,12 @@ int main(){
 	strcpy(file_name, "Two_Grid-test.txt");
 	doPrint2File(N, U, file_name);
 	
+	free(U);
+	free(F);
+	free(D);
+	free(D_c);
+	free(V);
+	free(V_f);
 
     return 0; 
 }
@@ -279,7 +285,7 @@ void doPrint2File(int N, double *U, char *file_name){
 	output = fopen(file_name, "w");
 
 	// Print result to CSV form
-	for(int j = N-1; j >= 0; j = j+1){
+	for(int j = N-1; j >= 0; j = j-1){
 		for(int i = 0; i < N; i = i+1){
 			if(i == N-1){
 				fprintf(output, "%lf\n", U[i+N*j]);
