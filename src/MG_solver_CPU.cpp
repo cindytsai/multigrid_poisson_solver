@@ -22,6 +22,7 @@ void doExactSolver(int, double, double*, double*, double, int);
 void doRestriction(int, double*, int, double*);
 void doProlongation(int, double*, int, double*);
 void doPrint(int, double*);
+void doPrint2File(int, double*, char*);
 
 // Sub Routine
 void InverseMatrix(int, double, double*, double*);
@@ -34,16 +35,48 @@ int main(){
 	cycle: The cycle
 	N:     Grid size
 	 */
-	// int cycle[5] = {-1, -1, 0, 1, 1};
-	// int N;
-	// int L;
-	
-    /*
-	Main MultiGrid Solver
-	 */
-	// for(int i = 0; i < cycle.length; i = i+1){
+	int N = 129;
+	int M = 65;
+	double L = 1.0;
+	int step = 10;
+	char file_name[50];
+	double *U, *F, *D, *D_c, *V, *V_f;
 
-	// }
+	U 	= (double*) malloc(N * N * sizeof(double));
+	F 	= (double*) malloc(N * N * sizeof(double));
+	D 	= (double*) malloc(N * N * sizeof(double));
+	D_c = (double*) malloc(M * M * sizeof(double));
+	V 	= (double*) malloc(M * M * sizeof(double));
+	V_f = (double*) malloc(N * N * sizeof(double));
+
+	// Initialize
+	memset(U, 0.0, N*N*sizeof(double));
+	getSource(N, L, F, 0.0, 0.0);
+
+	doSmoothing(N, L, U, F, step);
+	getResidual(N, L, U, F, D);
+	doRestriction(N, D, M, D_c);
+	for(int j = 0; j < M; j = j+1){
+		for(int i = 0; i < M; i = i+1){
+			D_c[i+j*M] = -D_c[i+j*M];
+		}
+	}
+	// D_c = -D_c
+	doExactSolver(M, L, V, D_c, 0.001, 1);
+	doProlongation(M, V, N, V_f);
+	
+	for(int j = 0; j < N; j = j+1){
+		for(int i = 0; i < N; i = i+1){
+			U[i+j*N] = U[i+j*N] + V_f[i+j*N];
+		}
+	}
+
+	doSmoothing(N, L, U, F, step);
+
+	strcpy(file_name, "Two_Grid-test.txt");
+	doPrint2File(N, U, file_name);
+	
+
     return 0; 
 }
 
@@ -239,6 +272,28 @@ void doPrint(int N, double *U){
 		printf("\n");
 	}
 }
+
+void doPrint2File(int N, double *U, char *file_name){
+	// Create file
+	FILE *output;
+	output = fopen(file_name, "w");
+
+	// Print result to CSV form
+	for(int j = N-1; j >= 0; j = j+1){
+		for(int i = 0; i < N; i = i+1){
+			if(i == N-1){
+				fprintf(output, "%lf\n", U[i+N*j]);
+			}
+			else{
+				fprintf(output, "%lf,", U[i+N*j]);
+			}
+		}
+	}
+
+	// Close file
+	fclose(output);
+}
+
 
 // Sub Routine
 void InverseMatrix(int N, double Length, double *X, double *F){
