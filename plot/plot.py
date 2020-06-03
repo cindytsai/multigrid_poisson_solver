@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-test = np.loadtxt('Two_Grid-test.txt',delimiter=',')
+test = np.loadtxt('../src/Two_Grid-test.txt',delimiter=',')
 N = test.shape[0]
 dx = 1.0/(N-1)
 
