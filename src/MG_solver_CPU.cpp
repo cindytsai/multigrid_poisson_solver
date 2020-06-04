@@ -18,7 +18,7 @@ MultiGrid Functions
  */
 // Main Function
 void getResidual(int, double, double*, double*, double*);
-void doSmoothing(int, double, double*, double*, int);
+void doSmoothing(int, double, double*, double*, int, double*);
 void doExactSolver(int, double, double*, double*, double, int);
 void doRestriction(int, double*, int, double*);
 void doProlongation(int, double*, int, double*);
@@ -44,6 +44,7 @@ int main(){
 	int level = 6;
 	char file_name[50];
 	double *U, *F, *D, *D_c, *V, *V_f;
+	double smoothing_error = 0;
 
 
 	LinkedList* list = new LinkedList(N);
@@ -69,7 +70,8 @@ int main(){
 			memset(U, 0.0, N*N*sizeof(double));
 			getSource(N, L, F, 0.0, 0.0);
 
-			doSmoothing(N, L, U, F, step);
+			doSmoothing(N, L, U, F, step, &smoothing_error);
+			printf("smoothing error= %f\n", smoothing_error);
 			getResidual(N, L, U, F, D);
 			doRestriction(N, D, M, D_c);
 			for(int j = 0; j < M; j = j+1){
@@ -106,7 +108,8 @@ int main(){
 					U[i+j*N] = U[i+j*N] + V_f[i+j*N];
 				}
 			}
-			doSmoothing(N, L, U, F, step);
+			doSmoothing(N, L, U, F, step, &smoothing_error);
+			printf("smoothing error=%f\n", smoothing_error);
 			free(V_f);
 			list->Pop();
 
@@ -191,18 +194,44 @@ void getResidual(int N, double L, double* U, double* F, double* D){
 
 }
 
-void doSmoothing(int N, double L, double* U, double* F, int step){
+void doSmoothing(int N, double L, double* U, double* F, int step, double* error){
 	double dx=L/(double) (N-1);
 	double delta;
 	//Gauss-Seidel
 	for(int s=0; s<step; s++){
+
 		for(int i=1; i<N-1; i++){
-			for(int j=1; j<N-1; j++){
+			for(int j= i%2==0 ? 2:1; j<N-1; j++){
 				delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
 		        *(U+i*N+j) += delta;
 			}
 		}
+
+		for(int i=1; i<N-1; i++){
+			for(int j= i%2==1 ? 2:1; j<N-1; j++){
+				delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+		        *(U+i*N+j) += delta;
+			}
+		}
+
 	}
+
+	*error = 0;
+
+	for(int i=1; i<N-1; i++){
+		for(int j= i%2==0 ? 2:1; j<N-1; j++){
+			*error+= (1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j);
+		}
+	}
+
+	for(int i=1; i<N-1; i++){
+		for(int j= i%2==1 ? 2:1; j<N-1; j++){
+			*error+= (1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j);
+		}
+	}
+
+	*error = *error/N/N;
+
 	
 }
 

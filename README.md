@@ -76,6 +76,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   * Approximate solution [1D-array address]: `double *U`
   * Source f [1D-array address]: `double *F`
   * Steps: `int step`
+  * Error: `double error`
 
 ### Exact Solver
 * void doExactSolver: Change made inside `double *U`
