@@ -1,10 +1,11 @@
 # Multigrid Poisson Solver
 Specified on Laplacian Operator.
 
-## Things to do
-- [x] Merge the code.
-- [ ] Check can it converges, if not, try on the restriction method that the grid values conserve.
-- [ ] Create a link list data structure, to control and record the workflow and the memory usage.
+## Contents
+* [Basic Notation](https://github.com/cindytsai/multigrid_poisson_solver#basic-notation)
+* [Workflow and Structure](https://github.com/cindytsai/multigrid_poisson_solver#workflow-and-structure)
+* [CPU Functions]
+* [GPU Function]
 
 ## Basic Notation
 Suppose the interest region is a square only.
@@ -16,7 +17,7 @@ Suppose the interest region is a square only.
 |       F       | Discretize source function to size N x N. | double*, 1-D array address |
 |       D       | Residual of size N x N.                   | double*, 1-D array address |
 
-## Structure
+## Workflow and Structure
 phi = ... </br>
 N = ..</br>
 cycle = 1D-array = {-1 , -1, 0, 1, 1}</br>
@@ -38,7 +39,7 @@ for i in cycle:</br>
 while():</br>
 &nbsp;triggers:</br>
 
-## Functions
+## CPU Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
 
 ### Source
@@ -76,7 +77,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   * Approximate solution [1D-array address]: `double *U`
   * Source f [1D-array address]: `double *F`
   * Steps: `int step`
-  * Error: `double error`
+  * Error: `double *error`
 
 ### Exact Solver
 * void doExactSolver: Change made inside `double *U`
