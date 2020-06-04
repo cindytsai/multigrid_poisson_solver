@@ -8,6 +8,10 @@
 #include <assert.h>
 #include "LinkList.h"
 
+
+#define N_THREADS_OMP 1
+
+
 /*
 For problem to be solved
  */
@@ -31,6 +35,8 @@ void GaussSeidel(int, double, double*, double*, double);
 
 
 int main(){
+
+	omp_set_num_threads( N_THREADS_OMP );
     /*
 	Settings
 	cycle: The cycle
@@ -38,10 +44,11 @@ int main(){
 	 */
 	int len = 18;
 	int cycle[len]={-1,-1,-1,0,1,-1,0,1,1,-1,-1,0,1,-1,0,1,1,1};
+	//int len = 11;
+	//int cycle[len]={-1,-1,-1,-1,-1,0,1,1,1,1,1};
 	int N = 256;
 	int M;
-	int step = 3;
-	int level = 6;
+	int step = 1;
 	char file_name[50];
 	double *U, *F, *D, *D_c, *V, *V_f;
 	double smoothing_error = 0;
@@ -125,6 +132,7 @@ int main(){
 			error+=fabs(D[i+j*N]);
 		}
 	}
+	error = error/N/N;
 
 	printf("error = %f\n", error);
 	strcpy(file_name, "Two_Grid-test.txt");
@@ -187,51 +195,123 @@ MultiGrid Functions
 // Main Function
 void getResidual(int N, double L, double* U, double* F, double* D){
 	double dx=L/(double) (N-1);
+//#	pragma omp parallel for	
 	for(int i=0; i<N; i++){
 		for(int j=0; j<N; j++){
 			if (i==0 or j==0 or j==N-1 or i==N-1)  *(D+i*N+j)=0.0;
 			else  *(D+i*N+j) =  (1.0/pow(dx,2)) * (*(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j);
 		}
 	}
-
+#	pragma omp barrier
 }
 
 void doSmoothing(int N, double L, double* U, double* F, int step, double* error){
 	double dx=L/(double) (N-1);
-	double delta;
 	//Gauss-Seidel
 	for(int s=0; s<step; s++){
 
+/*
+#     	pragma omp parallel for		
 		for(int i=1; i<N-1; i++){
-			for(int j= i%2==0 ? 2:1; j<N-1; j++){
-				delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-		        *(U+i*N+j) += delta;
+			for(int j= i%2==0 ? 2:1; j<N-1; j+=2){
+				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
 			}
 		}
-
+#		pragma omp barrier
+#     	pragma omp parallel for	
 		for(int i=1; i<N-1; i++){
-			for(int j= i%2==1 ? 2:1; j<N-1; j++){
-				delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-		        *(U+i*N+j) += delta;
+			for(int j= i%2==0 ? 1:2; j<N-1; j+=2){
+				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
 			}
 		}
+#		pragma omp barrier
+*/
+
+
+#     	pragma omp parallel for		
+		for(int i=1; i<N-1; i++){
+			for(int j= 1; j<N-1; j++){
+				if((j+i)%2==0) continue;
+				double delta;
+				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+			}
+		}
+#		pragma omp barrier
+#     	pragma omp parallel for	
+		for(int i=1; i<N-1; i++){
+			for(int j= 1; j<N-1; j++){
+				if((j+i)%2==1) continue;
+				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+			}
+		}
+#		pragma omp barrier
+
+
+/*
+		double sum1=0.0;
+//#     pragma omp parallel for reduction( +:sum1 )
+      for (int i=1; i<N-1; i++)
+      {
+        for (int j= i%2==0 ? 2:1 ; j<N-1; j+=2)
+        {
+          double delta=0.0;
+          delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+          sum1 += fabs(delta/ *(U+i*N+j));
+          *(U+i*N+j) += delta;
+        }
+      }
+
+#     pragma omp barrier
+
+      //even
+      double sum2=0.0;
+//#     pragma omp parallel for reduction( +:sum2 )
+      for (int i=1; i<N-1; i++)
+      {
+        for (int j= i%2==0 ? 1:2 ; j<N-1; j+=2)
+        {
+          double delta=0.0;
+          delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+          sum2 += fabs(delta/ *(U+i*N+j));
+          *(U+i*N+j) += delta;
+        }
+      }
+*/
+/*
+		for(int i=1; i<N-1; i++){
+			for(int j= 1; j<N-1; j++){
+				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+			}
+		}
+*/
+
+		/*
+		for(int i=1; i<N-1; i++){
+			for(int j= 1; j<N-1; j++){
+				if ((i+j)%2==1) { *(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));}
+			}
+		}
+		*/
 
 	}
 
-	*error = 0;
 
+
+    double sum1=0.0;
+#   pragma omp parallel for reduction( +:sum1 )
 	for(int i=1; i<N-1; i++){
-		for(int j= i%2==0 ? 2:1; j<N-1; j++){
-			*error+= fabs((1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j));
+		for(int j= i%2==0 ? 2:1; j<N-1; j+=2){
+			sum1 += fabs((1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j));
 		}
 	}
-
+    double sum2=0.0;
+#   pragma omp parallel for reduction( +:sum2 )
 	for(int i=1; i<N-1; i++){
-		for(int j= i%2==1 ? 2:1; j<N-1; j++){
-			*error+= fabs((1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j));
+		for(int j= i%2==0 ? 2:1; j<N-1; j+=2){
+			sum2 += fabs((1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j));
 		}
 	}
-
+	*error = sum1+sum2;
 	*error = *error/N/N;
 
 	
@@ -295,6 +375,7 @@ void doProlongation(int N, double* U_c, int M, double* U_f){
 	double c_dx = L / (double) (N-1), f_dx = L/(double) (M-1);
 	double ratio = c_dx/f_dx;
 
+//#	pragma omp parallel for
 	for(int i=0; i<N-1; i++){
 		for(int j=0; j<N-1; j++){
 			double c1x = j*c_dx, c1y = i*c_dx;
@@ -307,19 +388,11 @@ void doProlongation(int N, double* U_c, int M, double* U_f){
 			for(int k=ceil(i*ratio); k<ceil((i+1)*ratio); k++){
 				for(int l=ceil(j*ratio); l<ceil((j+1)*ratio); l++){
 					double f_x = l*f_dx, f_y =k*f_dx;
-
-					assert(c2x - f_x >= 0);
-					assert(f_x - c1x >= 0);
-					assert(c4x - f_x >= 0);
-					assert(f_x - c3x >= 0);
-					assert(c3y - f_y >= 0);
-					assert(f_y - c1y >= 0);
 					*(U_f + k*M + l) = ((c1*(c2x - f_x) + c2*(f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
 					if (l==M-2){
 						f_x = L;
 						*(U_f+ k*M + M-1) = ((c1 * (c2x - f_x) + c2 * (f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
 					}
-
 				}
 				if(k==M-2){
 					k=M-1;
@@ -327,12 +400,6 @@ void doProlongation(int N, double* U_c, int M, double* U_f){
 					for(int l=ceil(j*ratio); l<ceil((j+1)*ratio); l++){
 						f_x = l*f_dx;
 						f_y = k*f_dx;
-						assert(c2x - f_x >= 0);
-						assert(f_x - c1x >= 0);
-						assert(c4x - f_x >= 0);
-						assert(f_x - c3x >= 0);
-						assert(c3y - f_y >= 0);
-						assert(f_y - c1y >= 0);
 						*(U_f + (M-1)* M + l) = ((c1 * (c2x - f_x) + c2 * (f_x - c1x))*(c3y - f_y)  + (c3 * (c4x - f_x) + c4 * (f_x - c3x))*(f_y - c1y))/c_dx/c_dx;
 						if (l==M-2){
 							f_x = L;
@@ -344,6 +411,7 @@ void doProlongation(int N, double* U_c, int M, double* U_f){
 			
 		}
 	}
+#	pragma omp barrier
 }
 
 void doPrint(int N, double *U){
