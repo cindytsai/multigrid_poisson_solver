@@ -207,11 +207,12 @@ void getResidual(int N, double L, double* U, double* F, double* D){
 
 void doSmoothing(int N, double L, double* U, double* F, int step, double* error){
 	double dx=L/(double) (N-1);
+	double *U_old;
+	U_old = (double *) malloc(N*N*sizeof(double));
 	//Gauss-Seidel
 	for(int s=0; s<step; s++){
 
-		double *U_old;
-		U_old = (double *) malloc(N*N*sizeof(double));
+		
 		for(int i=0; i<N; i++){
 			for(int j=0; j<N; j++){
 				U_old[i*N+j]=U[i*N+j];
@@ -233,10 +234,9 @@ void doSmoothing(int N, double L, double* U, double* F, int step, double* error)
 		}
 #		pragma omp barrier
 
-		free(U_old);
 
 	}
-
+	free(U_old);
 
 
     double sum1=0.0;
