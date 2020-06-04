@@ -6,6 +6,7 @@
 #include <math.h>
 #include <cstring>
 #include <assert.h>
+#include "LinkList.h"
 
 /*
 For problem to be solved
@@ -35,53 +36,78 @@ int main(){
 	cycle: The cycle
 	N:     Grid size
 	 */
-	int N = 129;
-	int M = 65;
-	double L = 1.0;
+
+	int N = 1024;
+	int M;
 	int step = 10;
+	int level = 6;
 	char file_name[50];
 	double *U, *F, *D, *D_c, *V, *V_f;
 
-	U 	= (double*) malloc(N * N * sizeof(double));
-	F 	= (double*) malloc(N * N * sizeof(double));
-	D 	= (double*) malloc(N * N * sizeof(double));
-	D_c = (double*) malloc(M * M * sizeof(double));
-	V 	= (double*) malloc(M * M * sizeof(double));
-	V_f = (double*) malloc(N * N * sizeof(double));
 
-	// Initialize
-	memset(U, 0.0, N*N*sizeof(double));
-	getSource(N, L, F, 0.0, 0.0);
+	LinkedList* list = new LinkedList(N);
+	double L= list->Get_L();
+	ListNode* fine_node, * coarse_node;
 
-	doSmoothing(N, L, U, F, step);
-	getResidual(N, L, U, F, D);
-	doRestriction(N, D, M, D_c);
-	for(int j = 0; j < M; j = j+1){
-		for(int i = 0; i < M; i = i+1){
-			D_c[i+j*M] = -D_c[i+j*M];
+	for(int ll=0; ll<level; ll++){
+		fine_node = list->Get_coarsest_node();
+		N   = fine_node->Get_N();
+		U 	= fine_node->Get_U();
+		F 	= fine_node->Get_F();
+		D 	= fine_node->Get_D();
+
+		list -> Push();
+		coarse_node = list->Get_coarsest_node();
+		M = coarse_node->Get_N();
+
+		D_c = coarse_node->Get_F();
+		V 	= coarse_node->Get_U();
+		// Initialize
+		memset(U, 0.0, N*N*sizeof(double));
+		getSource(N, L, F, 0.0, 0.0);
+
+		doSmoothing(N, L, U, F, step);
+		getResidual(N, L, U, F, D);
+		doRestriction(N, D, M, D_c);
+		for(int j = 0; j < M; j = j+1){
+			for(int i = 0; i < M; i = i+1){
+				D_c[i+j*M] = -D_c[i+j*M];
+			}
 		}
+
+		if(ll==level-1) { doExactSolver(M, L, V, D_c, 0.001, 1); } 
 	}
-	// D_c = -D_c
-	doExactSolver(M, L, V, D_c, 0.001, 1);
-	doProlongation(M, V, N, V_f);
+
+	for (int ll=0; ll<level; ll++){
+		coarse_node = list->Get_coarsest_node();
+		M = coarse_node->Get_N();
+		V 	= coarse_node->Get_U();
+		fine_node = coarse_node->Get_prev();
+		N = fine_node->Get_N();
+		U = fine_node->Get_U();
+		F = fine_node->Get_F();
+
+
+		V_f = (double*) malloc(N * N * sizeof(double));
+
 	
-	for(int j = 0; j < N; j = j+1){
-		for(int i = 0; i < N; i = i+1){
-			U[i+j*N] = U[i+j*N] + V_f[i+j*N];
+		doProlongation(M, V, N, V_f);
+		
+		for(int j = 0; j < N; j = j+1){
+			for(int i = 0; i < N; i = i+1){
+				U[i+j*N] = U[i+j*N] + V_f[i+j*N];
+			}
 		}
+		doSmoothing(N, L, U, F, step);
+		free(V_f);
+		list->Pop();
+
 	}
 
-	doSmoothing(N, L, U, F, step);
 
 	strcpy(file_name, "Two_Grid-test.txt");
 	doPrint2File(N, U, file_name);
-	
-	free(U);
-	free(F);
-	free(D);
-	free(D_c);
-	free(V);
-	free(V_f);
+	delete list;
 
     return 0; 
 }
