@@ -9,7 +9,7 @@
 #include "LinkList.h"
 
 
-#define N_THREADS_OMP 1
+#define N_THREADS_OMP 4
 
 
 /*
@@ -195,7 +195,7 @@ MultiGrid Functions
 // Main Function
 void getResidual(int N, double L, double* U, double* F, double* D){
 	double dx=L/(double) (N-1);
-//#	pragma omp parallel for	
+#	pragma omp parallel for	
 	for(int i=0; i<N; i++){
 		for(int j=0; j<N; j++){
 			if (i==0 or j==0 or j==N-1 or i==N-1)  *(D+i*N+j)=0.0;
@@ -210,88 +210,30 @@ void doSmoothing(int N, double L, double* U, double* F, int step, double* error)
 	//Gauss-Seidel
 	for(int s=0; s<step; s++){
 
-/*
+		double *U_old;
+		U_old = (double *) malloc(N*N*sizeof(double));
+		for(int i=0; i<N; i++){
+			for(int j=0; j<N; j++){
+				U_old[i*N+j]=U[i*N+j];
+			}
+		}
+
 #     	pragma omp parallel for		
 		for(int i=1; i<N-1; i++){
 			for(int j= i%2==0 ? 2:1; j<N-1; j+=2){
-				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+				*(U+i*N+j) +=  0.25*( *(U_old+(i+1)*N+j) + *(U_old+(i-1)*N+j) + *(U_old+i*N+(j+1)) + *(U_old+i*N+(j-1)) - 4* *(U_old+i*N+j) - pow(dx,2) * *(F+i*N+j));
 			}
 		}
 #		pragma omp barrier
 #     	pragma omp parallel for	
 		for(int i=1; i<N-1; i++){
 			for(int j= i%2==0 ? 1:2; j<N-1; j+=2){
-				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-			}
-		}
-#		pragma omp barrier
-*/
-
-
-#     	pragma omp parallel for		
-		for(int i=1; i<N-1; i++){
-			for(int j= 1; j<N-1; j++){
-				if((j+i)%2==0) continue;
-				double delta;
-				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-			}
-		}
-#		pragma omp barrier
-#     	pragma omp parallel for	
-		for(int i=1; i<N-1; i++){
-			for(int j= 1; j<N-1; j++){
-				if((j+i)%2==1) continue;
-				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
+				*(U+i*N+j) +=  0.25*( *(U_old+(i+1)*N+j) + *(U_old+(i-1)*N+j) + *(U_old+i*N+(j+1)) + *(U_old+i*N+(j-1)) - 4* *(U_old+i*N+j) - pow(dx,2) * *(F+i*N+j));
 			}
 		}
 #		pragma omp barrier
 
-
-/*
-		double sum1=0.0;
-//#     pragma omp parallel for reduction( +:sum1 )
-      for (int i=1; i<N-1; i++)
-      {
-        for (int j= i%2==0 ? 2:1 ; j<N-1; j+=2)
-        {
-          double delta=0.0;
-          delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-          sum1 += fabs(delta/ *(U+i*N+j));
-          *(U+i*N+j) += delta;
-        }
-      }
-
-#     pragma omp barrier
-
-      //even
-      double sum2=0.0;
-//#     pragma omp parallel for reduction( +:sum2 )
-      for (int i=1; i<N-1; i++)
-      {
-        for (int j= i%2==0 ? 1:2 ; j<N-1; j+=2)
-        {
-          double delta=0.0;
-          delta = 0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-          sum2 += fabs(delta/ *(U+i*N+j));
-          *(U+i*N+j) += delta;
-        }
-      }
-*/
-/*
-		for(int i=1; i<N-1; i++){
-			for(int j= 1; j<N-1; j++){
-				*(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));
-			}
-		}
-*/
-
-		/*
-		for(int i=1; i<N-1; i++){
-			for(int j= 1; j<N-1; j++){
-				if ((i+j)%2==1) { *(U+i*N+j) +=  0.25*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j) - pow(dx,2) * *(F+i*N+j));}
-			}
-		}
-		*/
+		free(U_old);
 
 	}
 
@@ -375,7 +317,7 @@ void doProlongation(int N, double* U_c, int M, double* U_f){
 	double c_dx = L / (double) (N-1), f_dx = L/(double) (M-1);
 	double ratio = c_dx/f_dx;
 
-//#	pragma omp parallel for
+#	pragma omp parallel for
 	for(int i=0; i<N-1; i++){
 		for(int j=0; j<N-1; j++){
 			double c1x = j*c_dx, c1y = i*c_dx;
