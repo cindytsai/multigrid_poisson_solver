@@ -40,7 +40,7 @@ int main(){
 	int cycle[len]={-1,-1,-1,0,1,-1,0,1,1,-1,-1,0,1,-1,0,1,1,1};
 	int N = 256;
 	int M;
-	int step = 10;
+	int step = 3;
 	int level = 6;
 	char file_name[50];
 	double *U, *F, *D, *D_c, *V, *V_f;
@@ -122,13 +122,15 @@ int main(){
 
 	for(int j=0; j<N; j++){
 		for(int i=0; i<N; i++){
-			error+=D[i+j*N];
+			error+=fabs(D[i+j*N]);
 		}
 	}
 
 	printf("error = %f\n", error);
 	strcpy(file_name, "Two_Grid-test.txt");
 	doPrint2File(N, U, file_name);
+
+
 	delete list;
 
     return 0; 
@@ -220,13 +222,13 @@ void doSmoothing(int N, double L, double* U, double* F, int step, double* error)
 
 	for(int i=1; i<N-1; i++){
 		for(int j= i%2==0 ? 2:1; j<N-1; j++){
-			*error+= (1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j);
+			*error+= fabs((1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j));
 		}
 	}
 
 	for(int i=1; i<N-1; i++){
 		for(int j= i%2==1 ? 2:1; j<N-1; j++){
-			*error+= (1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j);
+			*error+= fabs((1.0/pow(dx,2))*( *(U+(i+1)*N+j) + *(U+(i-1)*N+j) + *(U+i*N+(j+1)) + *(U+i*N+(j-1)) - 4* *(U+i*N+j)) - *(F+i*N+j));
 		}
 	}
 
