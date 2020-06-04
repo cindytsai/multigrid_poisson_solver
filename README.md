@@ -4,8 +4,8 @@ Specified on Laplacian Operator.
 ## Contents
 * [Basic Notation](https://github.com/cindytsai/multigrid_poisson_solver#basic-notation)
 * [Workflow and Structure](https://github.com/cindytsai/multigrid_poisson_solver#workflow-and-structure)
-* [CPU Functions]
-* [GPU Function]
+* [CPU Functions](https://github.com/cindytsai/multigrid_poisson_solver#cpu-functions)
+* [GPU Functions](https://github.com/cindytsai/multigrid_poisson_solver#gpu-functions)
 
 ## Basic Notation
 Suppose the interest region is a square only.
@@ -131,3 +131,6 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 * Input Variable:
   * Grid size: `int N`
   * To be printed [1D-array address]: `double *U`
+  
+## GPU Functions
+
