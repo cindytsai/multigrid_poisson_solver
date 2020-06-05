@@ -155,7 +155,6 @@ void getSource(int N, double L, double *F, double min_x, double min_y){
 	int index;
 
 	#	pragma omp parallel for private(index, x, y)
-	{
 		for(int iy = 0; iy < N; iy = iy+1){
 			for(int ix = 0; ix < N; ix = ix+1){
 				index = ix + N * iy;
@@ -166,7 +165,6 @@ void getSource(int N, double L, double *F, double min_x, double min_y){
 				F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);
 			}
 		}
-	}
 
 }
 
