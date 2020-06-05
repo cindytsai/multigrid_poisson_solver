@@ -98,6 +98,8 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
     * Interest region length L: `double Length`
     * Exact solution [1D-array address]: `double *X`
     * Source Term f [1D-array address]: `double *F`
+* **NOTES:**
+  * Parallel with OpenMP later, since the performance is generally same as Gauss-Seidel, and it is hard to parallelize.
 
 #### Gauss-Seidel Relaxation Method
 * void GaussSeidel: Change made inside exact solution `double *U`. Relax till it reaches the target error.
@@ -115,7 +117,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
     * To be restrict [1D-array address]: `double *U_f`
     * Grid size: `int M`
     * After restriction[1D-array address]: `double *U_c`
-  * Notes:
+  * **NOTES:**
     1. Restriction is specific on residual, and since we only don't do relaxation on the boundary, so the boundary of restriction target grid is always "0".
 
 ### Prolongation
@@ -143,7 +145,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
 All of the grids are stored as 1D array, with size N x N, including the boundary.
 Since the GPU is specialized in doing single precision computation, all the subroutine function of calling GPU kernal are using `single precision`, only ExactSolver is `double precision`. After calling GPU kernel, typecasting back to `double precision`.
 
-### Source
+### Source (Problem Dependent)
 * void getSource_GPU: Get the discretize form of the source function of size N x N. Change made inside `double *F`.
   * Input Variable:
     * Grid size: `int N`
@@ -196,7 +198,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Residual d [1D-array address]: `float *D`
     * Error: `float *error`
 
-* **NOTE:**
+* **NOTES:**
   * Do this part if really needed.
   * Save this to the laste to finish.
 

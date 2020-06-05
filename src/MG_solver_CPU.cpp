@@ -154,16 +154,20 @@ void getSource(int N, double L, double *F, double min_x, double min_y){
 	double x, y;
 	int index;
 
-	for(int iy = 0; iy < N; iy = iy+1){
-		for(int ix = 0; ix < N; ix = ix+1){
-			index = ix + N * iy;
-			x = (double)ix * h + min_x;
-			y = (double)iy * h + min_y;
-
-			// Source from the problem
-			F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);
+	#	pragma omp parallel for private(index, x, y)
+	{
+		for(int iy = 0; iy < N; iy = iy+1){
+			for(int ix = 0; ix < N; ix = ix+1){
+				index = ix + N * iy;
+				x = (double)ix * h + min_x;
+				y = (double)iy * h + min_y;
+	
+				// Source from the problem
+				F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);
+			}
 		}
 	}
+
 }
 
 // Get the boundary of the problem Lu = f
@@ -175,18 +179,27 @@ void getBoundary(int N, double L, double *F, double min_x, double min_y){
 
 	memset(F, 0.0, N * N * sizeof(double));
 
-	for(int ix = 0; ix < N; ix = ix+1){
-		// Bottom boundary
-		F[ix] = 0.0;
-		// Top boundary
-		F[ix + N * (N - 1)] = 0.0;
+	#	pragma omp parallel private(index, x, y)
+	{
+		#	pragma omp for nowait
+		for(int ix = 0; ix < N; ix = ix+1){
+			// Bottom boundary
+			F[ix] = 0.0;
+			// Top boundary
+			F[ix + N * (N - 1)] = 0.0;
+		}
+
+		#	pragma omp for
+		for(int iy = 0; iy < N; iy = iy+1){
+			// Left boundary
+			F[N * iy] = 0.0;
+			// Right boundary
+			F[(N - 1) + N * iy] = 0.0;
+		}
+		#	pragma omp barrier
 	}
-	for(int iy = 0; iy < N; iy = iy+1){
-		// Left boundary
-		F[N * iy] = 0.0;
-		// Right boundary
-		F[(N - 1) + N * iy] = 0.0;
-	}
+
+
 }
 
 /*
@@ -287,6 +300,8 @@ void doRestriction(int N, double *U_f, int M, double *U_c){
 
 	// Run through the coarse grid and do restriction, 
 	// but without the boundary, since it is all "0"
+	
+	#	pragma omp for private(ix_f, iy_f, a, c, b, d, index_c, index_f)
 	for(int iy_c = 1; iy_c < (M-1); iy_c = iy_c+1){
 		for(int ix_c = 1; ix_c < (M-1); ix_c = ix_c+1){
 			
@@ -440,7 +455,6 @@ void InverseMatrix(int N, double Length, double *X, double *F){
 	row = 0;	// Start from 0th-row of Laplacian Matrix A
 	for(int j = 0; j < N; j = j+1){
 		for(int i = 0; i < N; i = i+1){
-			
 			if( i == 0 || i == N-1 || j == 0 || j == N-1){
 				// Boundary after laplacian Matrix is itself -> Set as 1
 				index = i + N * j;
@@ -592,7 +606,6 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	int index, ix, iy;	// Index of the point to be update
 	int l, r, t, b;		// Index of the neighbers
 
-	int *fw, *bw;		// Record the forward and backward index of the index
 	int *ieven, *iodd;	// Index of even / odd chestbox
 	double *U_old;		// For storing U during iteration
 	double *Residual; 	// Get the residual to compute the error
@@ -602,12 +615,11 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	 */
 	ieven = (int*) malloc(((N * N) / 2) * sizeof(int));
 	iodd  = (int*) malloc(((N * N) / 2) * sizeof(int));
-	fw = (int*) malloc(N * sizeof(int));
-	bw = (int*) malloc(N * sizeof(int));
 	U_old = (double*) malloc(N * N * sizeof(double));
 	Residual = (double*) malloc(N * N * sizeof(double));
 
 	// For even chestbox index
+	#	pragma omp parallel for
 	for(int i = 0; i < ((N * N) / 2); i = i+1){
 		int parity, ix, iy;
 		ix = (2 * i) % N;
@@ -617,6 +629,7 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 		ieven[i] = ix + iy * N;
 	}
 	// For odd chestbox index
+	#	pragma omp parallel for
 	for(int i = 0; i < ((N * N) / 2); i = i+1){
 		int parity, ix, iy;
 		ix = (2 * i) % N;
@@ -624,12 +637,6 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 		parity = (ix + iy + 1) % 2;
 		ix = ix + parity;
 		iodd[i] = ix + iy * N;
-	}
-
-	// For forward and backward index
-	for(int i = 0; i < N; i = i+1){
-		fw[i] = (i + 1) % N;
-		bw[i] = (i - 1 + N) % N;
 	}
 
 	// Initialize
@@ -640,53 +647,61 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	while( err > target_error ){
 		
 		// Update even chestbox
-		for(int i = 0; i < (N * N) / 2; i = i+1){
-			// Center index
-			index = ieven[i];
-			ix = index % N;
-			iy = index / N;
+		#	pragma omp parallel
+		{
+			#	pragma omp for private(index, ix, iy, l, r, t, b)
+			for(int i = 0; i < (N * N) / 2; i = i+1){
+				// Center index
+				index = ieven[i];
+				ix = index % N;
+				iy = index / N;
 
-			// Do not update the boundary
-			if((ix == 0) || (ix == (N-1)) || (iy == 0) || (iy == (N-1))){
-				continue;
+				// Do not update the boundary
+				if((ix == 0) || (ix == (N-1)) || (iy == 0) || (iy == (N-1))){
+					continue;
+				}
+
+				// Neighboring index
+				l = (ix - 1) + iy * N;
+				r = (ix + 1) + iy * N;
+				t = ix + (iy + 1) * N;
+				b = ix + (iy - 1) * N;
+
+				// Update result to U
+				U[index] = 0.25 * (U_old[l] + U_old[r] + U_old[t] + U_old[b] - pow(h, 2) * F[index]);
 			}
 
-			// Neighboring index
-			l = bw[ix] + iy * N;
-			r = fw[ix] + iy * N;
-			t = ix + fw[iy] * N;
-			b = ix + bw[iy] * N;
+			// Update odd chestbox
+			#	pragma omp for private(index, ix, iy, l, r, t, b)
+			for(int i = 0; i < (N * N) / 2; i = i+1){
+				// Center index
+				index = iodd[i];
+				ix = index % N;
+				iy = index / N;
 
-			// Update result to U
-			U[index] = 0.25 * (U_old[l] + U_old[r] + U_old[t] + U_old[b] - pow(h, 2) * F[index]);
+				// Do not update the boundary
+				if((ix == 0) || (ix == (N-1)) || (iy == 0) || (iy == (N-1))){
+					continue;
+				}
+
+				// Neighboring index
+				l = (ix - 1) + iy * N;
+				r = (ix + 1) + iy * N;
+				t = ix + (iy + 1) * N;
+				b = ix + (iy - 1) * N;
+
+				// Update result to U
+				U[index] = 0.25 * (U[l] + U[r] + U[t] + U[b] - pow(h, 2) * F[index]);			
+			}			
 		}
 
-		// Update odd chestbox
-		for(int i = 0; i < (N * N) / 2; i = i+1){
-			// Center index
-			index = iodd[i];
-			ix = index % N;
-			iy = index / N;
-
-			// Do not update the boundary
-			if((ix == 0) || (ix == (N-1)) || (iy == 0) || (iy == (N-1))){
-				continue;
-			}
-
-			// Neighboring index
-			l = bw[ix] + iy * N;
-			r = fw[ix] + iy * N;
-			t = ix + fw[iy] * N;
-			b = ix + bw[iy] * N;
-
-			// Update result to U
-			U[index] = 0.25 * (U[l] + U[r] + U[t] + U[b] - pow(h, 2) * F[index]);			
-		}
 
 		// Compute the error, without the boundary, since it is always "0"
 		iter = iter + 1;
 		err = 0.0;
 		getResidual(N, L, U, F, Residual);
+
+		#	pragma omp parallel for reduction( +:err )
 		for(int j = 1; j < (N-1); j = j+1){
 			for(int i = 1; i < (N-1); i = i+1){
 				err = err + fabs(Residual[i+N*j]);
@@ -699,8 +714,6 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	}
 
 	// Free the temperary resource
-	free(fw);
-	free(bw);
 	free(ieven);
 	free(iodd);
 	free(U_old);
