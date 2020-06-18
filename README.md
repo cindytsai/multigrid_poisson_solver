@@ -157,7 +157,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
 * \_\_global\_\_ void Source_GPU: Get the discretize form of the source function of size N x N. Change made inside `float *F`.
   * Input Variable:
     * Grid size: `int N`
-    * Interest Region length L: `float L`
+    * delta x: `float h`
     * Source f [1D-array address]: `float *F`
     * x minimum range: `float min_x`
     * y minimum range: `float min_y`
