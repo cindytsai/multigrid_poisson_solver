@@ -174,7 +174,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
 * \_\_global\_\_ void Residual_GPU: Get the residual d = Lu - f, changes made inside `float D`
   * Input Variable:
     * Grid size: `int N`
-    * Interest Region length L: `float L`
+    * delta x: `float h`
     * Approximate solution [1D-array address]: `float *U`
     * Source f [1D-array address]: `float *F`
     * Residual d [1D-array address]: `float *D`
