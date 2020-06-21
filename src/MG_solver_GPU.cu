@@ -10,7 +10,8 @@ __global__ void ker_Source_GPU(int, float, float*, float, float);
 __global__ void ker_Residual_GPU(int, float, float*, float*, float*);
 __global__ void ker_Error_GPU(int, float, float*, float*, float*, float*); // Do this part if needed
 __global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
-__global__ void ker_GaussSeidel_GPU(int, double, double*, double*, double);
+__global__ void ker_GaussSeideleven_GPU(int, double, double*, double*, double);
+__global__ void ker_GaussSeidelodd_GPU(int, double, double*, double*, double);
 __global__ void ker_Zoom_GPU(int, float*, int, float*);
 
 /*
@@ -196,7 +197,11 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F,
 	}
 }
 
-__global__ void ker_GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
+__global__ void ker_GaussSeideleven_GPU(int N, double h, double *U, double *F, double target_error){
+
+}
+
+__global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F, double target_error){
 
 }
 
@@ -310,7 +315,7 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	int sharedMemorySize;
 	float error_f;
 	float *d_U, *d_U0, *d_F, *d_err;		// device memory
-	float *h_U, *h_U0, *h_F, *h_err;		// host memory
+	float *h_U,        *h_F, *h_err;		// host memory
 
 	/*
 	CPU Part
@@ -318,15 +323,13 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	// Allocate host memory
 	h_F  = (float*) malloc(N * N * sizeof(float));
 	h_U  = (float*) malloc(N * N * sizeof(float));
-	h_U0 = (float*) malloc(N * N * sizeof(float));
-
+	
 	// Change data from double to float
 	#	pragma omp parallel for
 	for(int i = 0; i < N*N; i = i+1){
 		h_F[i] = (float) F[i];
 		h_U[i] = (float) U[i];
 	}
-	memcpy(h_U0, h_U, N * N * sizeof(float));
 
 	/*
 	GPU Part
@@ -358,11 +361,10 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 
 	// Copy data to device memory
 	cudaMemcpy( d_U,  h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_U0, h_U0, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
 
 	free(h_F);    // h_F, h_U0 are no longer needed
-	free(h_U0);
 
 	// Do the iteration with "step" steps
 	while( iter <= step ){
@@ -457,6 +459,65 @@ void doPrint2File(int N, double *U, char *file_name){
 	fclose(output);
 }
 
-void GaussSeidel(int N, double L, double *U, double *F, double target_error){
+void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
+	// Settings
+	double h = L / (double) (N-1);
+	int iter = 1;
+
+	// Settings for GPU
+	int max_m = 10;
+	int max_n = 5;
+	int min_n = 0;
+	int m = max_m;
+	int n = max_n;
+	int alter = 1;
+	int blocksPerGrid = pow(10, n);
+	int threadsPerBlock = pow(2, m);
+	int sharedMemorySize;
+	double error;
+	double *d_U, *d_U0, *d_F, *d_err;		// device memory
+	double       *h_U0,       *h_err;		// host memory
+
+	/*
+	CPU Part
+	 */
+	// Allocate host memory
+	h_U0 = (double*) malloc(N * N * sizeof(double));
+
+	/*
+	GPU Part
+	 */
+	// Check that blocksPerGrid * threadsPerBlock < ((N*N) / 2)
+	//        and threadsPerBlock = 2^m
+	while( blocksPerGrid * threadsPerBlock > (N*N) / 2 ){
+		// Decrease the exponential part
+		if( (alter % 4 != 0) || (n == min_n) ){
+			m = m - 1;
+			alter = alter + 1;
+		}
+		if( (alter % 4 == 0) && (n > min_n) ){
+			n = n - 1;
+			m = max_m;
+			alter = alter + 1;
+		}
+		blocksPerGrid = pow(10, n);
+		threadsPerBlock = pow(2, m);
+	}
+	sharedMemorySize = threadsPerBlock * sizeof(double);
+	h_err = (double*) malloc(blocksPerGrid * sizeof(double));
+
+	// Allocate device memory
+	cudaMalloc((void**)&d_U , N * N * sizeof(double));
+	cudaMalloc((void**)&d_U0, N * N * sizeof(double));
+	cudaMalloc((void**)&d_F , N * N * sizeof(double));
+	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(double));
+
+	// Copy data to device memory
+	cudaMemcpy(d_U, U, N * N * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_F, F, N * N * sizeof(double), cudaMemcpyHostToDevice);
+	
+
+
+
 
 }

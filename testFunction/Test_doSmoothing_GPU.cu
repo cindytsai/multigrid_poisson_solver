@@ -165,7 +165,7 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	int sharedMemorySize;
 	float error_f;
 	float *d_U, *d_U0, *d_F, *d_err;		// device memory
-	float *h_U, *h_U0, *h_F, *h_err;		// host memory
+	float *h_U,        *h_F, *h_err;		// host memory
 
 	/*
 	CPU Part
@@ -173,15 +173,13 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	// Allocate host memory
 	h_F  = (float*) malloc(N * N * sizeof(float));
 	h_U  = (float*) malloc(N * N * sizeof(float));
-	h_U0 = (float*) malloc(N * N * sizeof(float));
-
+	
 	// Change data from double to float
 	#	pragma omp parallel for
 	for(int i = 0; i < N*N; i = i+1){
 		h_F[i] = (float) F[i];
 		h_U[i] = (float) U[i];
 	}
-	memcpy(h_U0, h_U, N * N * sizeof(float));
 
 	/*
 	GPU Part
@@ -213,11 +211,10 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 
 	// Copy data to device memory
 	cudaMemcpy( d_U,  h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_U0, h_U0, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
 
 	free(h_F);    // h_F, h_U0 are no longer needed
-	free(h_U0);
 
 	// Do the iteration with "step" steps
 	while( iter <= step ){
