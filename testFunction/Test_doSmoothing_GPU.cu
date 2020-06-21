@@ -214,7 +214,7 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
 
-	free(h_F);    // h_F, h_U0 are no longer needed
+	free(h_F);    // h_F are no longer needed
 
 	// Do the iteration with "step" steps
 	while( iter <= step ){
