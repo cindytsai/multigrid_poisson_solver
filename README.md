@@ -154,7 +154,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * x minimum range: `double min_x`
     * y minimum range: `double min_y`
 
-* \_\_global\_\_ void Source_GPU: Get the discretize form of the source function of size N x N. Change made inside `float *F`.
+* \_\_global\_\_ void ker_Source_GPU: Get the discretize form of the source function of size N x N. Change made inside `float *F`.
   * Input Variable:
     * Grid size: `int N`
     * delta x: `float h`
@@ -171,7 +171,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Source f [1D-array address]: `double *F`
     * Residual d [1D-array address]: `dobule *D`
 
-* \_\_global\_\_ void Residual_GPU: Get the residual d = Lu - f, changes made inside `float D`
+* \_\_global\_\_ void ker_Residual_GPU: Get the residual d = Lu - f, changes made inside `float D`
   * Input Variable:
     * Grid size: `int N`
     * delta x: `float h`
@@ -189,7 +189,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Residual d [1D-array address]: `dobule *D`
     * Error: `double *error`
 
-* \_\_global\_\_ void Error_GPU: Save the result in `float *error`.
+* \_\_global\_\_ void ker_Error_GPU: Save the result in `float *error`.
   * Input Variable:
     * Grid size: `int N`
     * Interest Region length L: `float L`
@@ -216,15 +216,19 @@ Since the GPU is specialized in doing single precision computation, all the subr
     1. The function sets the range of the block size is 2^0 ~ 2^10, and grid size is 10^0 ~ 10^5.
     1. The selecting `threadsPerBlock` and `blocksPerGrid` method here assumes that the greater the `threadsPerBlock * blocksPerGrid` and `threadsPerBlock` is, the faster it is.
 
-* \_\_global\_\_ void Smoothing_GPU: Change made inside `float *U`, and save the error from the latest smoothing in `float *error`. Using the original one, without even / odd method. 
+* \_\_global\_\_ void ker_Smoothing_GPU: Change made inside `float *U` or `float *U0`, and save the error from the latest smoothing in `float *err`. Using Jacobi Method, without even / odd method. 
   * Input Variable:
     * Grid size: `int N`
     * delta x: `float h`
     * Approximate solution [1D-array address]: `float *U`
     * U_old [1D-array addreses]: `float *U0`
     * Source f [1D-array address]: `float *F`
-    * Steps: `int step`
+    * # of iterations: `int iter`
     * Error array [1D-array address]: `float *err`
+  * **NOTES:**
+    * Changes made after `step` steps
+      * If `step` is odd  :  get `d_U`
+      * If `step` is even :  get `d_U0`
 
 ### Exact Solver
 * void doExactSolver_GPU: Change made inside `double *U`.
@@ -238,7 +242,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
       * `option == 0`: _blank_
       * `option == 1`: use Gauss-Seidel, with even/odd method.
 
-* \_\_global\_\_ void GaussSeidel_GPU: Change made inside `double *U`.
+* \_\_global\_\_ void ker_GaussSeidel_GPU: Change made inside `double *U`.
   * Input Variable:
     * Grid size: `int N`
     * Interest Region length L: `double L`
@@ -261,7 +265,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Grid size: `int M`
     * After prolongation [1D-array address]: `double *U_f`
 
-* \_\_global\_\_ void Zoom_GPU: Zoom in/out from grid size `int N` to grid size `int M`. The final result is inside `float *U_m`.
+* \_\_global\_\_ void ker_Zoom_GPU: Zoom in/out from grid size `int N` to grid size `int M`. The final result is inside `float *U_m`.
   * Input Variable:
     * Grid size before zooming: `int N`
     * Grid to be zoomed [1D-array address]: `float *U_n`

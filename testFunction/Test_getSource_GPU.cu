@@ -3,7 +3,7 @@
 #include <omp.h>
 #include <cuda_runtime.h>
 
-__global__ void Source_GPU(int N, float h, float *F, float min_x, float min_y){
+__global__ void ker_Source_GPU(int N, float h, float *F, float min_x, float min_y){
 	// Thread index inside the GPU kernel
 	int index = blockDim.x * blockIdx.x + threadIdx.x;
 	int ix, iy;
@@ -110,7 +110,7 @@ int main( int argc, char *argv[] ){
 
 	cudaMalloc((void**)&d_F, N * N * sizeof(float));
 
-	Source_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_F, (float)min_x, (float)min_y);
+	ker_Source_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_F, (float)min_x, (float)min_y);
 
 	cudaMemcpy(f_F, d_F, N * N * sizeof(float), cudaMemcpyDeviceToHost);
 

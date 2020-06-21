@@ -6,16 +6,17 @@
 /*
 GPU kernel
  */
-__global__ void Source_GPU(int, float, float*, float, float);
-__global__ void Residual_GPU(int, float, float*, float*, float*);
-__global__ void Error_GPU(int, float, float*, float*, float*, float*); // Do this part if needed
-__global__ void Smoothing_GPU(int, float, float*, float*, float*, int, float*);
-__global__ void GaussSeidel_GPU(int, double, double*, double*, double);
-__global__ void Zoom_GPU(int, float*, int, float*);
+__global__ void ker_Source_GPU(int, float, float*, float, float);
+__global__ void ker_Residual_GPU(int, float, float*, float*, float*);
+__global__ void ker_Error_GPU(int, float, float*, float*, float*, float*); // Do this part if needed
+__global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
+__global__ void ker_GaussSeidel_GPU(int, double, double*, double*, double);
+__global__ void ker_Zoom_GPU(int, float*, int, float*);
 
 /*
 Wrap the GPU kernel as CPU function
  */
+// Main Function
 void getSource_GPU(int, double, double*, double, double);
 void getResidual_GPU(int, double, double*, double*, double*);
 void getError_GPU(int, double, double*, double*, double*, double*); // Do this part if needed
@@ -25,6 +26,9 @@ void doRestriction_GPU(int, double*, int, double*);
 void doProlongation_GPU(int, double*, int, double*);
 void doPrint(int, double*);
 void doPrint2File(int, double*, char*);
+
+// Sub Routine
+void GaussSeidel_GPU(int, double, double*, double*, double);
 
 
 int main(){
@@ -53,7 +57,7 @@ int main(){
 /*
 GPU Kernel
  */
-__global__ void Source_GPU(int N, float h, float *F, float min_x, float min_y){
+__global__ void ker_Source_GPU(int N, float h, float *F, float min_x, float min_y){
 	// Thread index inside the GPU kernel
 	int index = blockDim.x * blockIdx.x + threadIdx.x;
 	int ix, iy;
@@ -85,7 +89,7 @@ __global__ void Boundary_GPU(int N, float L, float *F, float min_x, float min_y)
 
 }
 
-__global__ void Residual_GPU(int N, float h, float *U, float *F, float *D){
+__global__ void ker_Residual_GPU(int N, float h, float *U, float *F, float *D){
 	// Thread index inside the GPU kernel
 	int index = blockDim.x * blockIdx.x + threadIdx.x;
 	int ix, iy;
@@ -116,7 +120,7 @@ __global__ void Residual_GPU(int N, float h, float *U, float *F, float *D){
 	__syncthreads();
 }
 
-__global__ void Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int iter, float *err){
+__global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int iter, float *err){
 	
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ float cache[];
@@ -192,11 +196,11 @@ __global__ void Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int
 	}
 }
 
-__global__ void GaussSeidel_GPU(int N, 	double L, double *U, double *F, double target_error){
+__global__ void ker_GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
 
 }
 
-__global__ void Zoom_GPU(int N, float *U_n, int M, float *U_m){
+__global__ void ker_Zoom_GPU(int N, float *U_n, int M, float *U_m){
 	
 }
 
@@ -219,7 +223,7 @@ void getSource_GPU(int N, double L, double *F, double min_x, double min_y){
 	 */
 	cudaMalloc((void**)&d_F, N * N * sizeof(float));
 
-	Source_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_F, (float)min_x, (float)min_y);
+	ker_Source_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_F, (float)min_x, (float)min_y);
 
 	cudaMemcpy(h_F, d_F, N * N * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -268,7 +272,7 @@ void getResidual_GPU(int N, double L, double *U, double *F, double *D){
 	cudaMemcpy(d_F, h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U, h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
 
-	Residual_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_U, d_F, d_D);
+	ker_Residual_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_U, d_F, d_D);
 	
 	cudaMemcpy(h_D, d_D, N * N * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -363,7 +367,7 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	// Do the iteration with "step" steps
 	while( iter <= step ){
 		
-		Smoothing_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_U0, d_F, iter, d_err);
+		ker_Smoothing_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_U0, d_F, iter, d_err);
 		
 		iter = iter + 1;
 
@@ -409,6 +413,20 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	free(h_U);
 }
 
+void doExactSolver_GPU(int N, double L, double *U, double *F, double target_error, int option){
+	// Option can only be 1 for now, since there is only Gauss-Seidel Even/Odd Method for now.
+	if( option == 0 ){
+		printf("Using GPU, no Inverse Matrix Method in doExactSolver_GPU!\n");
+		exit(1);
+	}
+
+	// Gauss-Seidel Even/Odd Method
+	if( option == 1){
+		GaussSeidel_GPU(N, L, U, F, target_error);
+	}
+
+}
+
 void doPrint(int N, double *U){
 	for(int j = N-1; j >= 0; j = j-1){
 		for(int i = 0; i < N; i = i+1){
@@ -437,4 +455,8 @@ void doPrint2File(int N, double *U, char *file_name){
 
 	// Close file
 	fclose(output);
+}
+
+void GaussSeidel(int N, double L, double *U, double *F, double target_error){
+
 }

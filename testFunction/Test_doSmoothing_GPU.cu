@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <cuda_runtime.h>
 
-__global__ void Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int iter, float *err){
+__global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int iter, float *err){
 	
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ float cache[];
@@ -222,7 +222,7 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	// Do the iteration with "step" steps
 	while( iter <= step ){
 		
-		Smoothing_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_U0, d_F, iter, d_err);
+		ker_Smoothing_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_U0, d_F, iter, d_err);
 		
 		iter = iter + 1;
 

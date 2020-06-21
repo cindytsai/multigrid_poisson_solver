@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <cuda_runtime.h>
 
-__global__ void Residual_GPU(int N, float h, float *U, float *F, float *D){
+__global__ void ker_Residual_GPU(int N, float h, float *U, float *F, float *D){
 	// Thread index inside the GPU kernel
 	int index = blockDim.x * blockIdx.x + threadIdx.x;
 	int ix, iy;
@@ -129,7 +129,7 @@ int main( int argc, char *argv[] ){
 	cudaMemcpy(d_F, h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U, h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);	
 
-	Residual_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_U, d_F, d_D);
+	ker_Residual_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_U, d_F, d_D);
 	
 	cudaMemcpy(h_D, d_D, N * N * sizeof(float), cudaMemcpyDeviceToHost);
 
