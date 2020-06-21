@@ -181,29 +181,6 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Source f [1D-array address]: `float *F`
     * Residual d [1D-array address]: `float *D`
 
-### Error
-* void getError_GPU: Get the error define as adding all the elements in the residual, save the result in `double *error`.
-  * Input Variable:
-    * Grid size: `int N`
-    * Interest Region length L: `double L`
-    * Approximate solution [1D-array address]: `double *U`
-    * Source f [1D-array address]: `double *F`
-    * Residual d [1D-array address]: `dobule *D`
-    * Error: `double *error`
-
-* \_\_global\_\_ void ker_Error_GPU: Save the result in `float *error`.
-  * Input Variable:
-    * Grid size: `int N`
-    * Interest Region length L: `float L`
-    * Approximate solution [1D-array address]: `float *U`
-    * Source f [1D-array address]: `float *F`
-    * Residual d [1D-array address]: `float *D`
-    * Error: `float *error`
-
-* **NOTES:**
-  * Do this part if really needed.
-  * Save this to the last to finish.
-
 ### Smoothing
 * void doSmoothing_GPU: Change made inside `double *U`, and save the error from the latest smoothing in `double *error`.
   * Input Variable:
@@ -217,8 +194,9 @@ Since the GPU is specialized in doing single precision computation, all the subr
     1. Using parallel reduction, so `threadsPerBlock = pow(2,m)`, and `threadsPerBlock * blocksPerGrid <= N*N`. 
     1. The function sets the range of the block size is 2^0 ~ 2^10, and grid size is 10^0 ~ 10^5.
     1. The selecting `threadsPerBlock` and `blocksPerGrid` method here assumes that the greater the `threadsPerBlock * blocksPerGrid` and `threadsPerBlock` is, the faster it is.
+    1. The error is defined as Sum( | Lu - f | ) / (N * N) = Sum( | U - U0 | ) * 4 / ((h * h) * (N * N)).
   * **TODOs if have time:**
-    - [ ] Improve the performance with sync with all threads with a grid, so that we can save some time on calculating unwanted errors during the iterations.
+    - [ ] Improve the performance with sync with all threads within a grid _Cooperative Kernel_, so that we can save some time on calculating unwanted errors during the iterations.
 
 * \_\_global\_\_ void ker_Smoothing_GPU: Change made inside `float *U` or `float *U0`, and save the error from the latest smoothing in `float *err`. Using Jacobi Method, without even / odd method. 
   * Input Variable:
@@ -254,14 +232,33 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Exact solution [1D-array address]: `double *U`
     * Source Term [1D-array address]: `double *F`
     * Target error: `double target_error`
+  * **NOTES:**
+    1. Write two kernel, one deals with even index, the other deals with odd index.
+    1. 
+  * **TODOs if have time:**
+    - [ ] Try using sync with all threads within a grid _Cooperative Kernel_, which means forge two kernels together.
 
-* \_\_global\_\_ void ker_GaussSeidel_GPU: Change made inside `double *U`.
+* \_\_global\_\_ void ker_GaussSeideleven_GPU: Change made inside `double *U`, update even index only.
   * Input Variable:
     * Grid size: `int N`
-    * Interest Region length L: `double L`
+    * delta x: `double h`
     * Approximation solution [1D-array address]: `double *U`
     * Souce f [1D-array address]: `double *F`
-    * Target error: `double target_error`
+
+* \_\_global\_\_ void ker_GaussSeidelodd_GPU: Change made inside `double *U`, update odd index only.
+  * Input Variable:
+    * Grid size: `int N`
+    * delta x: `double h`
+    * Approximation solution [1D-array address]: `double *U`
+    * Souce f [1D-array address]: `double *F`
+
+* \_\_global\_\_ void ker_Error_GPU: Get the error of U, define as Sum( | Lu - F | ) / (N * N).
+  * Input Variable:
+    * Grid size: `int N`
+    * delta x: `double h`
+    * Approximation solution [1D-array address]: `double *U`
+    * Souce f [1D-array address]: `double *F`
+    * Error array [1D-array address]: `double *err`
 
 ### Restriction / Prolongation
 * void doRestriction: Change made inside `double *U_c`
