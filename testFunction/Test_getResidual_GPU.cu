@@ -103,7 +103,7 @@ int main( int argc, char *argv[] ){
 
     float gpu_time_use;
 
-    printf("~Run the test~");
+    printf("~Run the test~\n");
     double h = L / (double)(N - 1);
 
     h_D = (float*) malloc(N * N * sizeof(float));

@@ -70,7 +70,7 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
     * Residual d [1D-array address]: `dobule *D`
 
 ### Smoothing
-* void doSmoothing: Change made inside `double *U`
+* void doSmoothing: Change made inside `double *U`, and save the error from the latest smoothing in `double *error`.
   * Input Variable:
     * Grid size: `int N`
     * Interest Region length L: `double L`
@@ -211,15 +211,20 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Source f [1D-array address]: `double *F`
     * Steps: `int step`
     * Error: `double *error`
+  * **NOTES:**
+    1. Using parallel reduction, so `threadsPerBlock = pow(2,m)`, and `threadsPerBlock * blocksPerGrid <= N*N`. 
+    1. The function sets the range of the block size is 2^0 ~ 2^10, and grid size is 10^0 ~ 10^5.
+    1. The selecting `threadsPerBlock` and `blocksPerGrid` method here assumes that the greater the `threadsPerBlock * blocksPerGrid` and `threadsPerBlock` is, the faster it is.
 
-* \_\_global\_\_ void Smoothing_GPU: Change made inside `float *U`, and save the error from the latest smoothing in `float *error`.
+* \_\_global\_\_ void Smoothing_GPU: Change made inside `float *U`, and save the error from the latest smoothing in `float *error`. Using the original one, without even / odd method. 
   * Input Variable:
     * Grid size: `int N`
-    * Interest Region length L: `float L`
+    * delta x: `float h`
     * Approximate solution [1D-array address]: `float *U`
+    * U_old [1D-array addreses]: `float *U0`
     * Source f [1D-array address]: `float *F`
     * Steps: `int step`
-    * Error: `float *error`
+    * Error array [1D-array address]: `float *err`
 
 ### Exact Solver
 * void doExactSolver_GPU: Change made inside `double *U`.
