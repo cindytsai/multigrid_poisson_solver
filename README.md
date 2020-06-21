@@ -223,7 +223,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Approximate solution [1D-array address]: `float *U`
     * U_old [1D-array addreses]: `float *U0`
     * Source f [1D-array address]: `float *F`
-    * # of iterations: `int iter`
+    * Current numbers of iterations: `int iter`
     * Error array [1D-array address]: `float *err`
   * **NOTES:**
     * Changes made after `step` steps
@@ -241,6 +241,15 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Solver options: `int option`
       * `option == 0`: _blank_
       * `option == 1`: use Gauss-Seidel, with even/odd method.
+
+#### Gauss-Seidel Relaxation Method
+* void GaussSeidel_GPU: Change made inside exact solution `double *U`. Relax till it reaches the target error.
+  * Input Variable:
+    * Grid size: `int N`
+    * Interest Region length L: `double L`
+    * Exact solution [1D-array address]: `double *U`
+    * Source Term [1D-array address]: `double *F`
+    * Target error: `double target_error`
 
 * \_\_global\_\_ void ker_GaussSeidel_GPU: Change made inside `double *U`.
   * Input Variable:
