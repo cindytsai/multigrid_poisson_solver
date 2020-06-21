@@ -170,6 +170,8 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Approximate solution [1D-array address]: `double *U`
     * Source f [1D-array address]: `double *F`
     * Residual d [1D-array address]: `dobule *D`
+  * **TODOs if have time:**
+    - [ ] Increase the performance with Source term `double *F` and Approximate solution `double *U` using texture memory.
 
 * \_\_global\_\_ void ker_Residual_GPU: Get the residual d = Lu - f, changes made inside `float D`
   * Input Variable:
@@ -200,7 +202,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
 
 * **NOTES:**
   * Do this part if really needed.
-  * Save this to the laste to finish.
+  * Save this to the last to finish.
 
 ### Smoothing
 * void doSmoothing_GPU: Change made inside `double *U`, and save the error from the latest smoothing in `double *error`.
@@ -215,6 +217,8 @@ Since the GPU is specialized in doing single precision computation, all the subr
     1. Using parallel reduction, so `threadsPerBlock = pow(2,m)`, and `threadsPerBlock * blocksPerGrid <= N*N`. 
     1. The function sets the range of the block size is 2^0 ~ 2^10, and grid size is 10^0 ~ 10^5.
     1. The selecting `threadsPerBlock` and `blocksPerGrid` method here assumes that the greater the `threadsPerBlock * blocksPerGrid` and `threadsPerBlock` is, the faster it is.
+  * **TODOs if have time:**
+    - [ ] Improve the performance with sync with all threads with a grid, so that we can save some time on calculating unwanted errors during the iterations.
 
 * \_\_global\_\_ void ker_Smoothing_GPU: Change made inside `float *U` or `float *U0`, and save the error from the latest smoothing in `float *err`. Using Jacobi Method, without even / odd method. 
   * Input Variable:
