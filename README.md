@@ -2,10 +2,17 @@
 Specified on Laplacian Operator.
 
 ## Contents
+* [Branches](https://github.com/cindytsai/multigrid_poisson_solver#branches)
 * [Basic Notation](https://github.com/cindytsai/multigrid_poisson_solver#basic-notation)
 * [Workflow and Structure](https://github.com/cindytsai/multigrid_poisson_solver#workflow-and-structure)
 * [CPU Functions](https://github.com/cindytsai/multigrid_poisson_solver#cpu-functions)
 * [GPU Functions](https://github.com/cindytsai/multigrid_poisson_solver#gpu-functions)
+
+## Branches
+* **master**
+  * In GPU function, use `double precision` in exact solver.
+* **SP-doExactSolver_GPU**
+  * In GPU function, use `single precision` in exact solver.
 
 ## Basic Notation
 Suppose the interest region is a square only.
