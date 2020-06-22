@@ -192,18 +192,8 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 		// Get the error
 		ker_Error_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_F, d_err);
 		
-		// DEBUG info
-		printf("Done ker_Error_GPU\n");
-		cudaError_t cuda_error;
-		cuda_error = cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
-
-		if(cuda_error != cudaSuccess){
-			printf("cudaMemcpy failed\n");
-			exit(1);
-		}
-		else{
-			printf("cudaMemcpy success\n");
-		}
+		// Copy error array back to host
+		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
 
 		// Calculate the error from error array
 		error = 0.0;
