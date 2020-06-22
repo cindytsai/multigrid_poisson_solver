@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <cuda_runtime.h>
 
-__global__ void ker_GaussSeideleven_GPU(int N, float h, float *U, float *F){
+__global__ void ker_GaussSeideleven_GPU_Single(int N, float h, float *U, float *F){
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
@@ -37,10 +37,9 @@ __global__ void ker_GaussSeideleven_GPU(int N, float h, float *U, float *F){
 		// Stride
 		i = i + blockDim.x * gridDim.x;
 	}
-
 }
 
-__global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
+__global__ void ker_GaussSeidelodd_GPU_Single(int N, float h, float *U, float *F){
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
@@ -71,10 +70,9 @@ __global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
 		// Stride
 		i = i + blockDim.x * gridDim.x;
 	}
-
 }
 
-__global__ void ker_Error_GPU(int N, float h, float *U, float *F, float *err){
+__global__ void ker_Error_GPU_Single(int N, float h, float *U, float *F, float *err){
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ float cache[];
 	int ib = blockDim.x / 2;
@@ -131,7 +129,8 @@ __global__ void ker_Error_GPU(int N, float h, float *U, float *F, float *err){
 	}
 }
 
-void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
+
+void GaussSeidel_GPU_Single(int N, double L, double *U, double *F, double target_error){
 	// Settings
 	double h = L / (double) (N-1);
 	int iter = 1;
@@ -201,11 +200,11 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	// Do the iteration until it is smaller than the target_error
 	while( error > target_error ){
 		// Iteration Even / Odd index
-		ker_GaussSeideleven_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
-		ker_GaussSeidelodd_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
+		ker_GaussSeideleven_GPU_Single <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
+		ker_GaussSeidelodd_GPU_Single <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
 		
 		// Get the error
-		ker_Error_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_F, d_err);
+		ker_Error_GPU_Single <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_F, d_err);
 		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(float), cudaMemcpyDeviceToHost);
 
 		// Calculate the error from error array
@@ -241,6 +240,7 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 }
 
 
+
 void doExactSolver_GPU(int N, double L, double *U, double *F, double target_error, int option){
 	// Option can only be 1 for now, since there is only Gauss-Seidel Even/Odd Method for now.
 	if( option == 0 ){
@@ -250,7 +250,7 @@ void doExactSolver_GPU(int N, double L, double *U, double *F, double target_erro
 
 	// Gauss-Seidel Even/Odd Method
 	if( option == 1){
-		GaussSeidel_GPU(N, L, U, F, target_error);
+		GaussSeidel_GPU_Single(N, L, U, F, target_error);
 	}
 
 }

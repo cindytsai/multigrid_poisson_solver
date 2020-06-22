@@ -9,9 +9,9 @@ GPU kernel
 __global__ void ker_Source_GPU(int, float, float*, float, float);
 __global__ void ker_Residual_GPU(int, float, float*, float*, float*);
 __global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
-__global__ void ker_GaussSeideleven_GPU(int, double, double*, double*);
-__global__ void ker_GaussSeidelodd_GPU(int, double, double*, double*);
-__global__ void ker_Error_GPU(int, double, double*, double*, double*);
+__global__ void ker_GaussSeideleven_GPU_Single(int, double, double*, double*);
+__global__ void ker_GaussSeidelodd_GPU_Single(int, double, double*, double*);
+__global__ void ker_Error_GPU_Single(int, double, double*, double*, double*);
 __global__ void ker_Zoom_GPU(int, float*, int, float*);
 
 /*
@@ -28,7 +28,7 @@ void doPrint(int, double*);
 void doPrint2File(int, double*, char*);
 
 // Sub Routine
-void GaussSeidel_GPU(int, double, double*, double*, double);
+void GaussSeidel_GPU_Single(int, double, double*, double*, double);
 
 
 int main(){
@@ -196,7 +196,7 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F,
 	}
 }
 
-__global__ void ker_GaussSeideleven_GPU(int N, float h, float *U, float *F){
+__global__ void ker_GaussSeideleven_GPU_Single(int N, float h, float *U, float *F){
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
@@ -229,7 +229,7 @@ __global__ void ker_GaussSeideleven_GPU(int N, float h, float *U, float *F){
 	}
 }
 
-__global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
+__global__ void ker_GaussSeidelodd_GPU_Single(int N, float h, float *U, float *F){
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
@@ -262,7 +262,7 @@ __global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
 	}
 }
 
-__global__ void ker_Error_GPU(int N, float h, float *U, float *F, float *err){
+__global__ void ker_Error_GPU_Single(int N, float h, float *U, float *F, float *err){
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ float cache[];
 	int ib = blockDim.x / 2;
@@ -538,7 +538,7 @@ void doExactSolver_GPU(int N, double L, double *U, double *F, double target_erro
 
 	// Gauss-Seidel Even/Odd Method
 	if( option == 1){
-		GaussSeidel_GPU(N, L, U, F, target_error);
+		GaussSeidel_GPU_Single(N, L, U, F, target_error);
 	}
 
 }
@@ -573,7 +573,7 @@ void doPrint2File(int N, double *U, char *file_name){
 	fclose(output);
 }
 
-void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
+void GaussSeidel_GPU_Single(int N, double L, double *U, double *F, double target_error){
 	// Settings
 	double h = L / (double) (N-1);
 
@@ -642,11 +642,11 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	// Do the iteration until it is smaller than the target_error
 	while( error > target_error ){
 		// Iteration Even / Odd index
-		ker_GaussSeideleven_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
-		ker_GaussSeidelodd_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
+		ker_GaussSeideleven_GPU_Single <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
+		ker_GaussSeidelodd_GPU_Single <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h, d_U, d_F);
 		
 		// Get the error
-		ker_Error_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_F, d_err);
+		ker_Error_GPU_Single <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_F, d_err);
 		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(float), cudaMemcpyDeviceToHost);
 
 		// Calculate the error from error array
