@@ -8,10 +8,10 @@ GPU kernel
  */
 __global__ void ker_Source_GPU(int, float, float*, float, float);
 __global__ void ker_Residual_GPU(int, float, float*, float*, float*);
-__global__ void ker_Error_GPU(int, float, float*, float*, float*, float*); // Do this part if needed
 __global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
-__global__ void ker_GaussSeideleven_GPU(int, double, double*, double*, double);
-__global__ void ker_GaussSeidelodd_GPU(int, double, double*, double*, double);
+__global__ void ker_GaussSeideleven_GPU(int, double, double*, double*);
+__global__ void ker_GaussSeidelodd_GPU(int, double, double*, double*);
+__global__ void ker_Error_GPU(int, double, double*, double*, double*);
 __global__ void ker_Zoom_GPU(int, float*, int, float*);
 
 /*
@@ -20,7 +20,6 @@ Wrap the GPU kernel as CPU function
 // Main Function
 void getSource_GPU(int, double, double*, double, double);
 void getResidual_GPU(int, double, double*, double*, double*);
-void getError_GPU(int, double, double*, double*, double*, double*); // Do this part if needed
 void doSmoothing_GPU(int, double, double*, double*, int, double*);
 void doExactSolver_GPU(int, double, double*, double*, double, int);
 void doRestriction_GPU(int, double*, int, double*);
@@ -147,7 +146,7 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F,
 			// Do nothing
 		}
 		else{
-			if( iter % 2 == 1){
+			if( iter % 2 == 1 ){
 				// Update in U
 				// U0 -> old, U -> new
 				l = U0[(ix-1) + N*iy];
@@ -197,12 +196,131 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F,
 	}
 }
 
-__global__ void ker_GaussSeideleven_GPU(int N, double h, double *U, double *F, double target_error){
+__global__ void ker_GaussSeideleven_GPU(int N, double h, double *U, double *F){
+	// Settings
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int parity, ix, iy;
+	int index;		// index of the point to be update
+	int l, r, t, d;
 
+	while( i < (N*N) / 2){
+		// Parse the index of even chestbox
+		ix = (2 * i) % N;
+		iy = ((2 * i) / N) % N;
+		parity = (ix + iy) % 2;
+		ix = ix + parity;
+
+		// Ignore the boundary
+		if( (ix == 0) || (ix == N-1) || (iy == 0) || (iy == N-1) ){
+			// Do nothing
+		}
+		else{
+			index = ix + iy * N;
+			l = U[(ix-1) + N*iy];
+			r = U[(ix+1) + N*iy];
+			t = U[ix + N*(iy+1)];
+			d = U[ix + N*(iy-1)];
+
+			U[index] = 0.25 * (l + r + t + d - h * h * F[index]);
+		}
+		
+		// Stride
+		index = index + blockDim.x * gridDim.x;
+	}
+
+	__syncthreads();
 }
 
-__global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F, double target_error){
+__global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F){
+	// Settings
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int parity, ix, iy;
+	int index;		// index of the point to be update
+	int l, r, t, d;
 
+	while( i < (N*N) / 2){
+		// Parse the index of even chestbox
+		ix = (2 * i) % N;
+		iy = ((2 * i) / N) % N;
+		parity = (ix + iy + 1) % 2;
+		ix = ix + parity;
+
+		// Ignore the boundary
+		if( (ix == 0) || (ix == N-1) || (iy == 0) || (iy == N-1) ){
+			// Do nothing
+		}
+		else{
+			index = ix + iy * N;
+			l = U[(ix-1) + N*iy];
+			r = U[(ix+1) + N*iy];
+			t = U[ix + N*(iy+1)];
+			d = U[ix + N*(iy-1)];
+
+			U[index] = 0.25 * (l + r + t + d - h * h * F[index]);
+		}
+		
+		// Stride
+		index = index + blockDim.x * gridDim.x;
+	}
+
+	__syncthreads();
+}
+
+__global__ void ker_Error_GPU(int N, double h, double *U, double *F, double *err){
+	// Settings for parallel reduction to calculate the error array 
+	extern __shared__ double cache[];
+	int ib = blockDim.x / 2;
+	int cacheIndex = threadIdx.x;
+	double diff = 0.0;
+
+	// Settings for getting the residual
+	double l, r, t, d, c;		// value of neighboring index and the center index
+	int index = blockDim.x * blockIdx.x + threadIdx.x;
+	int ix, iy;
+
+	// Getting the residual
+	while( index < N*N ){
+		// Parse the index to ix, iy
+		ix = index % N;
+		iy = index / N;
+
+		// Ignore the boundary
+		if( (ix == 0) || (ix == N-1) || (iy == 0) || (iy == N-1) ){
+			// Do nothing
+		}
+		else{
+			l = U[(ix-1) + N*iy];
+			r = U[(ix+1) + N*iy];
+			t = U[ix + N*(iy+1)];
+			d = U[ix + N*(iy-1)];
+			c = U[index];
+
+			diff = diff + fabs( ( (l + r + t + d - 4.0 * c) / (h * h) ) - F[index] );
+		}
+
+		// Stride
+		index = index + blockDim.x * gridDim.x;
+	}
+
+	cache[cacheIndex] = diff;
+
+	__syncthreads();
+
+	// Calculate error array with parallel reduction
+	while( ib != 0 ){
+
+		if(cacheIndex < ib){
+			cache[cacheIndex] = cache[cacheIndex] + cache[cacheIndex + ib];
+		}
+
+		__syncthreads();
+
+		ib = ib / 2;
+	}
+
+	if(cacheIndex == 0){
+		err[blockIdx.x] = cache[0];
+	}
 }
 
 __global__ void ker_Zoom_GPU(int N, float *U_n, int M, float *U_m){
@@ -364,7 +482,7 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
 
-	free(h_F);    // h_F, h_U0 are no longer needed
+	free(h_F);    // h_F are no longer needed
 
 	// Do the iteration with "step" steps
 	while( iter <= step ){
@@ -462,7 +580,6 @@ void doPrint2File(int N, double *U, char *file_name){
 void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
 	// Settings
 	double h = L / (double) (N-1);
-	int iter = 1;
 
 	// Settings for GPU
 	int max_m = 10;
@@ -474,15 +591,9 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	int blocksPerGrid = pow(10, n);
 	int threadsPerBlock = pow(2, m);
 	int sharedMemorySize;
-	double error;
-	double *d_U, *d_U0, *d_F, *d_err;		// device memory
-	double       *h_U0,       *h_err;		// host memory
-
-	/*
-	CPU Part
-	 */
-	// Allocate host memory
-	h_U0 = (double*) malloc(N * N * sizeof(double));
+	double error = target_error + 1.0;
+	double *d_U, *d_F, *d_err;		// device memory
+	double             *h_err;		// host memory
 
 	/*
 	GPU Part
@@ -504,11 +615,12 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 		threadsPerBlock = pow(2, m);
 	}
 	sharedMemorySize = threadsPerBlock * sizeof(double);
+
+	// Allocate host memory for error array
 	h_err = (double*) malloc(blocksPerGrid * sizeof(double));
 
 	// Allocate device memory
 	cudaMalloc((void**)&d_U , N * N * sizeof(double));
-	cudaMalloc((void**)&d_U0, N * N * sizeof(double));
 	cudaMalloc((void**)&d_F , N * N * sizeof(double));
 	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(double));
 
@@ -516,8 +628,32 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	cudaMemcpy(d_U, U, N * N * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_F, F, N * N * sizeof(double), cudaMemcpyHostToDevice);
 	
+	// Do the iteration until it is smaller than the target_error
+	while( error > target_error ){
+		// Iteration Even / Odd index
+		ker_GaussSeideleven_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
+		ker_GaussSeidelodd_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
+		
+		// Get the error
+		ker_Error_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_F, d_err);
+		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
 
+		// Calculate the error from error array
+		error = 0.0;
+		for(int i = 0; i < blocksPerGrid; i = i+1){
+			error = error + h_err[i];
+		}
+		error = error / (double)(N*N);
+	}
 
+	// Copy data back to host memory
+	cudaMemcpy(U, d_U, N * N * sizeof(double), cudaMemcpyDeviceToHost);
 
+	// Free the device memory
+	cudaFree(d_U);
+	cudaFree(d_F);
+	cudaFree(d_err);
 
+	// Free the host memory
+	free(h_err);
 }
