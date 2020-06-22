@@ -233,8 +233,7 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Source Term [1D-array address]: `double *F`
     * Target error: `double target_error`
   * **NOTES:**
-    1. Write two kernel, one deals with even index, the other deals with odd index.
-    1. 
+    1. Write two kernel, one deals with even index, the other deals with odd index, so that we can make sure that updates on even/odd are all done.
   * **TODOs if have time:**
     - [ ] Try using sync with all threads within a grid _Cooperative Kernel_, which means forge two kernels together.
 
