@@ -132,6 +132,7 @@ __global__ void ker_Error_GPU(int N, float h, float *U, float *F, float *err){
 void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error){
 	// Settings
 	double h = L / (double) (N-1);
+	int iter = 1;
 
 	// Settings for GPU
 	int max_m = 10;
@@ -212,6 +213,9 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 			error = error + h_err[i];
 		}
 		error = error / (float)(N*N);
+
+		printf("iter = %d, error = %lf\n", iter, error);
+		iter = iter + 1;
 	}
 
 	// Copy data back to host memory
