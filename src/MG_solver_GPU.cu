@@ -10,11 +10,11 @@ __global__ void ker_Source_GPU(int, float, float*, float, float);
 __global__ void ker_Residual_GPU(int, float, float*, float*, float*);
 __global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
 __global__ void ker_GaussSeideleven_GPU_Double(int, double, double*, double*);
-__global__ void ker_GaussSeideleven_GPU_Single(int, double, double*, double*);
+__global__ void ker_GaussSeideleven_GPU_Single(int, float, float*, float*);
 __global__ void ker_GaussSeidelodd_GPU_Double(int, double, double*, double*);
-__global__ void ker_GaussSeidelodd_GPU_Single(int, double, double*, double*);
+__global__ void ker_GaussSeidelodd_GPU_Single(int, float, float*, float*);
 __global__ void ker_Error_GPU_Double(int, double, double*, double*, double*);
-__global__ void ker_Error_GPU_Single(int, double, double*, double*, double*);
+__global__ void ker_Error_GPU_Single(int, float, float*, float*, float*);
 __global__ void ker_Zoom_GPU(int, float*, int, float*);
 
 /*
