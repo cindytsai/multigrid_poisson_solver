@@ -35,10 +35,9 @@ __global__ void ker_GaussSeideleven_GPU(int N, float h, float *U, float *F){
 		}
 		
 		// Stride
-		index = index + blockDim.x * gridDim.x;
+		i = i + blockDim.x * gridDim.x;
 	}
 
-	__syncthreads();
 }
 
 __global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
@@ -70,10 +69,9 @@ __global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
 		}
 		
 		// Stride
-		index = index + blockDim.x * gridDim.x;
+		i = i + blockDim.x * gridDim.x;
 	}
 
-	__syncthreads();
 }
 
 __global__ void ker_Error_GPU(int N, float h, float *U, float *F, float *err){
@@ -218,7 +216,9 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 		}
 		error = error / (float)(N*N);
 
+		// DEBUG info
 		printf("iter = %d, error = %lf\n", iter, error);
+		fflush(stdout);
 		iter = iter + 1;
 	}
 

@@ -225,7 +225,7 @@ __global__ void ker_GaussSeideleven_GPU(int N, float h, float *U, float *F){
 		}
 		
 		// Stride
-		index = index + blockDim.x * gridDim.x;
+		i = i + blockDim.x * gridDim.x;
 	}
 }
 
@@ -258,7 +258,7 @@ __global__ void ker_GaussSeidelodd_GPU(int N, float h, float *U, float *F){
 		}
 		
 		// Stride
-		index = index + blockDim.x * gridDim.x;
+		i = i + blockDim.x * gridDim.x;
 	}
 }
 
