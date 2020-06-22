@@ -444,8 +444,8 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	#	pragma omp parallel for
 	for(int i = 0; i < N*N; i = i+1){
 		h_F[i] = (float) F[i];
+		h_U[i] = (float) U[i];
 	}
-	memset(h_U, 0.0, N * N * sizeof(float));
 
 	/*
 	GPU Part
