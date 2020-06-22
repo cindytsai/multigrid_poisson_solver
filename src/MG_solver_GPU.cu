@@ -444,8 +444,8 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	#	pragma omp parallel for
 	for(int i = 0; i < N*N; i = i+1){
 		h_F[i] = (float) F[i];
-		h_U[i] = (float) U[i];
 	}
+	memset(h_U, 0.0, N * N * sizeof(float));
 
 	/*
 	GPU Part
@@ -477,8 +477,8 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 
 	// Copy data to device memory
 	cudaMemcpy( d_U,  h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
+	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 
 	free(h_F);    // h_F are no longer needed
 
