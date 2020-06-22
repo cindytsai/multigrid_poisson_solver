@@ -761,11 +761,11 @@ void GaussSeidel_GPU_Double(int N, double L, double *U, double *F, double target
 	// Do the iteration until it is smaller than the target_error
 	while( error > target_error ){
 		// Iteration Even / Odd index
-		ker_GaussSeideleven_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
-		ker_GaussSeidelodd_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
+		ker_GaussSeideleven_GPU_Double <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
+		ker_GaussSeidelodd_GPU_Double <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
 		
 		// Get the error
-		ker_Error_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_F, d_err);
+		ker_Error_GPU_Double <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_F, d_err);
 		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
 
 		// Calculate the error from error array
