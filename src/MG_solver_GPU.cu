@@ -586,7 +586,7 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	int alter = 1;
 	int blocksPerGrid = pow(10, n);
 	int threadsPerBlock = pow(2, m);
-	int sharedMemorySize;
+	long long int sharedMemorySize;
 	float error = (float) target_error + 1.0;
 	float *d_U, *d_F, *d_err;		// device memory
 	float *h_U, *h_F, *h_err;		// host memory
@@ -601,7 +601,6 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	// Transfer the data from double to float
 	#	pragma omp parallel for
 	for(int i = 0; i < N*N; i = i+1){
-		h_U[i] = (float) U[i];
 		h_F[i] = (float) F[i];
 	}
 
@@ -635,7 +634,7 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(float));
 
 	// Copy data to device memory
-	cudaMemcpy(d_U, h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemset(d_U, 0.0, N * N * sizeof(float));
 	cudaMemcpy(d_F, h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 
 	free(h_F); 		// h_F is no longer needed.
