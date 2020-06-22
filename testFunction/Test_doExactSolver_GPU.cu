@@ -11,7 +11,7 @@ __global__ void ker_GaussSeideleven_GPU(int N, double h, double *U, double *F){
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
 	int index;		// index of the point to be update
-	int l, r, t, d;
+	double l, r, t, d;
 
 	while( i < (N*N) / 2){
 		// Parse the index of even chestbox
@@ -38,7 +38,6 @@ __global__ void ker_GaussSeideleven_GPU(int N, double h, double *U, double *F){
 		index = index + blockDim.x * gridDim.x;
 	}
 
-	__syncthreads();
 }
 
 __global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F){
@@ -46,7 +45,7 @@ __global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F){
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
 	int index;		// index of the point to be update
-	int l, r, t, d;
+	double l, r, t, d;
 
 	while( i < (N*N) / 2){
 		// Parse the index of even chestbox
@@ -73,7 +72,6 @@ __global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F){
 		index = index + blockDim.x * gridDim.x;
 	}
 
-	__syncthreads();
 }
 
 __global__ void ker_Error_GPU(int N, double h, double *U, double *F, double *err){
