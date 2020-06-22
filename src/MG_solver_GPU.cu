@@ -623,7 +623,7 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(double));
 
 	// Copy data to device memory
-	cudaMemcpy(d_U, U, N * N * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemset(d_U, 0.0, N * N * sizeof(double));
 	cudaMemcpy(d_F, F, N * N * sizeof(double), cudaMemcpyHostToDevice);
 	
 	// Do the iteration until it is smaller than the target_error
