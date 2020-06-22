@@ -143,7 +143,8 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   
 ## GPU Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
-Since the GPU is specialized in doing single precision computation, all the subroutine function of calling GPU kernal are using `single precision`, only ExactSolver is `double precision`. After calling GPU kernel, typecasting back to `double precision`.
+Since the GPU is specialized in doing single precision computation, all the subroutine function of calling GPU kernal are using `single precision`. After calling GPU kernel, typecasting back to `double precision`.
+Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out that it's tooooo slow.
 
 ### Source (Problem Dependent)
 * void getSource_GPU: Get the discretize form of the source function of size N x N. Change made inside `double *F`.
@@ -237,27 +238,27 @@ Since the GPU is specialized in doing single precision computation, all the subr
   * **TODOs if have time:**
     - [ ] Try using sync with all threads within a grid _Cooperative Kernel_, which means forge two kernels together.
 
-* \_\_global\_\_ void ker_GaussSeideleven_GPU: Change made inside `double *U`, update even index only.
+* \_\_global\_\_ void ker_GaussSeideleven_GPU: Change made inside `float *U`, update even index only.
   * Input Variable:
     * Grid size: `int N`
-    * delta x: `double h`
-    * Approximation solution [1D-array address]: `double *U`
-    * Souce f [1D-array address]: `double *F`
+    * delta x: `float h`
+    * Approximation solution [1D-array address]: `float *U`
+    * Souce f [1D-array address]: `float *F`
 
-* \_\_global\_\_ void ker_GaussSeidelodd_GPU: Change made inside `double *U`, update odd index only.
+* \_\_global\_\_ void ker_GaussSeidelodd_GPU: Change made inside `float *U`, update odd index only.
   * Input Variable:
     * Grid size: `int N`
-    * delta x: `double h`
-    * Approximation solution [1D-array address]: `double *U`
-    * Souce f [1D-array address]: `double *F`
+    * delta x: `float h`
+    * Approximation solution [1D-array address]: `float *U`
+    * Souce f [1D-array address]: `float *F`
 
 * \_\_global\_\_ void ker_Error_GPU: Get the error of U, define as Sum( | Lu - F | ) / (N * N).
   * Input Variable:
     * Grid size: `int N`
-    * delta x: `double h`
-    * Approximation solution [1D-array address]: `double *U`
-    * Souce f [1D-array address]: `double *F`
-    * Error array [1D-array address]: `double *err`
+    * delta x: `float h`
+    * Approximation solution [1D-array address]: `float *U`
+    * Souce f [1D-array address]: `float *F`
+    * Error array [1D-array address]: `float *err`
 
 ### Restriction / Prolongation
 * void doRestriction: Change made inside `double *U_c`
