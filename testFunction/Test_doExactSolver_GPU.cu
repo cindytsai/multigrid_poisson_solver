@@ -38,6 +38,8 @@ __global__ void ker_GaussSeideleven_GPU(int N, double h, double *U, double *F){
 		index = index + blockDim.x * gridDim.x;
 	}
 
+	__syncthreads();
+
 }
 
 __global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F){
@@ -71,6 +73,8 @@ __global__ void ker_GaussSeidelodd_GPU(int N, double h, double *U, double *F){
 		// Stride
 		index = index + blockDim.x * gridDim.x;
 	}
+
+	__syncthreads();
 
 }
 
@@ -145,7 +149,7 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	int alter = 1;
 	int blocksPerGrid = pow(10, n);
 	int threadsPerBlock = pow(2, m);
-	int sharedMemorySize;
+	long long int sharedMemorySize;
 	double error = target_error + 1.0;
 	double *d_U, *d_F, *d_err;		// device memory
 	double             *h_err;		// host memory
@@ -182,16 +186,28 @@ void GaussSeidel_GPU(int N, double L, double *U, double *F, double target_error)
 	// Copy data to device memory
 	cudaMemcpy(d_U, U, N * N * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_F, F, N * N * sizeof(double), cudaMemcpyHostToDevice);
-	
+
 	// Do the iteration until it is smaller than the target_error
 	while( error > target_error ){
 		// Iteration Even / Odd index
 		ker_GaussSeideleven_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
 		ker_GaussSeidelodd_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
-		
+
 		// Get the error
 		ker_Error_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_F, d_err);
-		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
+		
+		// DEBUG info
+		printf("Done ker_Error_GPU\n");
+		cudaError_t cuda_error;
+		cuda_error = cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
+
+		if(cuda_error != cudaSuccess){
+			printf("cudaMemcpy failed\n");
+			exit(1);
+		}
+		else{
+			printf("cudaMemcpy success\n");
+		}
 
 		// Calculate the error from error array
 		error = 0.0;
