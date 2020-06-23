@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <cuda_runtime.h>
+#include "LinkList.h"
 
 /*
 GPU kernel
@@ -53,12 +54,111 @@ int main(){
 	// Settings for OpenMP
 	omp_set_num_threads( 16 );
 
-	/*
-	Multigrid Poisson Solver
+	    /*
+	Settings
+	cycle: The cycle
+	N:     Grid size
 	 */
+	int len = 18;
+	int cycle[len]={-1,-1,-1,0,1,-1,0,1,1,-1,-1,0,1,-1,0,1,1,1};
+	//int len = 11;
+	//int cycle[len]={-1,-1,-1,-1,-1,0,1,1,1,1,1};
+	int N = 256;
+	int M;
+	int step = 1;
+	char file_name[50];
+	double *U, *F, *D, *D_c, *V, *V_f;
+	double smoothing_error = 0;
+
+
+	LinkedList* list = new LinkedList(N);
+	double L= list->Get_L();
+	ListNode* fine_node, * coarse_node;
+
+	for(int ll=0; ll<len; ll++){
+		if (cycle[ll]==-1){
+			printf("go to coarser level\n");
+			fine_node = list->Get_coarsest_node();
+			N   = fine_node->Get_N();
+			U 	= fine_node->Get_U();
+			F 	= fine_node->Get_F();
+			D 	= fine_node->Get_D();
+
+			list -> Push();
+			coarse_node = list->Get_coarsest_node();
+			M = coarse_node->Get_N();
+
+			D_c = coarse_node->Get_F();
+			V 	= coarse_node->Get_U();
+			// Initialize
+			memset(U, 0.0, N*N*sizeof(double));
+			getSource_GPU(N, L, F, 0.0, 0.0);
+
+			doSmoothing_GPU(N, L, U, F, step, &smoothing_error);
+			printf("smoothing error= %f\n", smoothing_error);
+			getResidual_GPU(N, L, U, F, D);
+			doRestriction_GPU(N, D, M, D_c);
+			for(int j = 0; j < M; j = j+1){
+				for(int i = 0; i < M; i = i+1){
+					D_c[i+j*M] = -D_c[i+j*M];
+				}
+			}
+		}
+
+		if(cycle[ll]==0) { 
+			printf("DoExactSolver\n");
+			doExactSolver_GPU(M, L, V, D_c, 0.000001, 1);
+
+		} 
 	
+		if(cycle[ll]==1){
+			printf("Go to finer level\n");
+			coarse_node = list->Get_coarsest_node();
+			M = coarse_node->Get_N();
+			V 	= coarse_node->Get_U();
+			fine_node = coarse_node->Get_prev();
+			N = fine_node->Get_N();
+			U = fine_node->Get_U();
+			F = fine_node->Get_F();
+
+
+			V_f = (double*) malloc(N * N * sizeof(double));
+
+		
+			doProlongation_GPU(M, V, N, V_f);
+			
+			for(int j = 0; j < N; j = j+1){
+				for(int i = 0; i < N; i = i+1){
+					U[i+j*N] = U[i+j*N] + V_f[i+j*N];
+				}
+			}
+			doSmoothing_GPU(N, L, U, F, step, &smoothing_error);
+			printf("smoothing error=%f\n", smoothing_error);
+			free(V_f);
+			list->Pop();
+
+		}
+	}
+	D = fine_node->Get_D();
+
+	getResidual_GPU(N, L, U, F, D);
+	double error=0;
+
+	for(int j=0; j<N; j++){
+		for(int i=0; i<N; i++){
+			error+=fabs(D[i+j*N]);
+		}
+	}
+	error = error/N/N;
+
+	printf("error = %f\n", error);
+	strcpy(file_name, "Two_Grid-test.txt");
+	doPrint2File(N, U, file_name);
+
+	delete list;
+
 	// Reset the device
-	cudaDeviceReset( 0 );
+	cudaDeviceReset();
 
 	return 0;
 }
@@ -132,7 +232,8 @@ __global__ void ker_Residual_GPU(int N, float h, float *U, float *F, float *D){
 __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int iter, float *err){
 	
 	// Settings for parallel reduction to calculate the error array 
-	extern __shared__ float cache[];
+	extern __shared__ __align__(sizeof(float)) unsigned char cache_smoothing[];
+	float *cache = reinterpret_cast<float *>(cache_smoothing);
 	int ib = blockDim.x / 2;
 	int cacheIndex = threadIdx.x;
 	float diff =  0.0;
@@ -341,7 +442,8 @@ __global__ void ker_GaussSeidelodd_GPU_Single(int N, float h, float *U, float *F
 
 __global__ void ker_Error_GPU_Double(int N, double h, double *U, double *F, double *err){
 	// Settings for parallel reduction to calculate the error array 
-	extern __shared__ double cache[];
+	extern __shared__ __align__(sizeof(double)) unsigned char cache_error_double[];
+	double *cache = reinterpret_cast<double *>(cache_error_double);
 	int ib = blockDim.x / 2;
 	int cacheIndex = threadIdx.x;
 	double diff = 0.0;
@@ -398,7 +500,8 @@ __global__ void ker_Error_GPU_Double(int N, double h, double *U, double *F, doub
 
 __global__ void ker_Error_GPU_Single(int N, float h, float *U, float *F, float *err){
 	// Settings for parallel reduction to calculate the error array 
-	extern __shared__ float cache[];
+	extern __shared__ __align__(sizeof(float)) unsigned char cache_error_single[];
+	float *cache = reinterpret_cast<float *>(cache_error_single);
 	int ib = blockDim.x / 2;
 	int cacheIndex = threadIdx.x;
 	float diff = 0.0;
