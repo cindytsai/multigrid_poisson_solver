@@ -15,7 +15,7 @@ __global__ void ker_GaussSeidelodd_GPU_Double(int, double, double*, double*);
 __global__ void ker_GaussSeidelodd_GPU_Single(int, float, float*, float*);
 __global__ void ker_Error_GPU_Double(int, double, double*, double*, double*);
 __global__ void ker_Error_GPU_Single(int, float, float*, float*, float*);
-__global__ void ker_Zoom_GPU(int, float*, int, float*);
+__global__ void ker_Zoom_GPU(int, float, int, float, float*);
 
 /*
 Wrap the GPU kernel as CPU function
@@ -34,6 +34,11 @@ void doPrint2File(int, double*, char*);
 void GaussSeidel_GPU_Double(int, double, double*, double*, double);
 void GaussSeidel_GPU_Single(int, double, double*, double*, double);
 
+/*
+Global Variable
+ */
+// declare the texture memory for GPU functions
+__align__(8) texture<float> texMem_float;
 
 int main(){
 	// Settings for GPU
@@ -448,7 +453,44 @@ __global__ void ker_Error_GPU_Single(int N, float h, float *U, float *F, float *
 	}
 }
 
-__global__ void ker_Zoom_GPU(int N, float *U_n, int M, float *U_m){
+__global__ void ker_Zoom_GPU(int N, float h_n, int M, float h_m, float *U_m){
+
+	int index_m = blockDim.x * blockIdx.x + threadIdx.x;
+	int index_n;
+	int ix_m, iy_m;
+	int ix_n, iy_n;
+	float a, c;		// the ratio of the coarse grid point to the first met lower left fine grid index in x-dir, y-dir
+					// Should be between 0 <= a,c < 1
+	float b, d;		// ratio
+
+
+	while( index_m < M*M ){
+		// Parse the index_m
+		ix_m = index_m % M;
+		iy_m = index_m / M;
+
+		// Ignore the boundary
+		if( (ix_m == 0) || (ix_m == M-1) || (iy_m == 0) || (iy_m == M-1) ){
+			// Do nothing
+		}
+		else{
+			// Calculate the ratio and the lower left grid_n index
+			ix_n = (int) floorf((float)ix_m * h_m / h_n);
+			iy_n = (int) floorf((float)iy_m * h_m / h_n);
+			a = fmodf((float)ix_m * h_m, h_n) / h_n;
+			c = fmodf((float)iy_m * h_m, h_n) / h_n;
+			b = 1.0 - a;
+			d = 1.0 - c;
+			index_n = ix_n + iy_n * N;
+
+			// TODO:Start from here~
+			U_m[index_m] = b * d * U_f[index_f] + a * d * U_f[index_f+1] + c * b * U_f[index_f+N] + a * c * U_f[index_f+N+1];
+		}
+
+
+		// Stride
+		index_m = index_m + blockDim.x * gridDim.x;
+	}
 	
 }
 
@@ -675,6 +717,67 @@ void doExactSolver_GPU(int N, double L, double *U, double *F, double target_erro
 		GaussSeidel_GPU_Single(N, L, U, F, target_error);
 	}
 
+}
+
+void doRestriction_GPU(int N, double *U_f, int M, double *U_c){
+
+	// Settings
+	double h_f = 1.0 / (double) (N - 1);	// spacing in finer grid
+	double h_c = 1.0 / (double) (M - 1);	// spacing in coarser grid
+
+	// Settings for GPU
+	int blocksPerGrid = 10;
+	int threadsPerBlock = 10;
+	float *d_Uf, *d_Uc;
+	float *h_Uf, *h_Uc;
+
+	/*
+	CPU Part
+	 */
+	// Allocate host memory
+	h_Uf = (float*) malloc(N * N * sizeof(float));
+	h_Uc = (float*) malloc(M * M * sizeof(float));
+
+	// Transfer data from double to float
+	#	pragma omp parallel for
+	for(int i = 0; i < N*N; i = i+1){
+		h_Uf[i] = (float) U_f[i];
+	}
+
+	/*
+	GPU Part
+	 */
+	// Allocate device memory
+	cudaMalloc((void**)&d_Uf, N * N * sizeof(float));
+	cudaMalloc((void**)&d_Uc, M * M * sizeof(float));
+
+	// Bind d_Uf to texture memory
+	cudaBindTexture(NULL, texMem_float, d_Uf, N * N * sizeof(float));
+
+	// Copy data to device memory and initialize d_Uc as zeros
+	cudaMemcpy(d_Uf, h_Uf, N * N * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemset(d_Uc, 0.0, M * M * sizeof(float));
+
+	free(h_Uf);		// h_Uf is no longer needed
+
+	// Call the kernel
+	ker_Zoom_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h_f, M, (float)h_c, d_Uc);
+
+	// Copy data back to host memory
+	cudaMemcpy(h_Uc, d_Uc, M * M * sizeof(float), cudaMemcpyDeviceToHost);
+
+	// Unbind texture memory and free the device memory
+	cudaUnbindTexture(texMem_float);
+	cudaFree(d_Uf);
+	cudaFree(d_Uc);
+
+	// Transfer data from float to double
+	#	pragma omp parallel for
+	for(int i = 0; i < M*M; i = i+1){
+		U_c[i] = (double) h_Uc[i];
+	}
+
+	free(h_Uc);
 }
 
 void doPrint(int N, double *U){

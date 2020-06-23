@@ -315,10 +315,14 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
 * \_\_global\_\_ void ker_Zoom_GPU: Zoom in/out from grid size `int N` to grid size `int M`. The final result is inside `float *U_m`.
   * Input Variable:
     * Grid size before zooming: `int N`
-    * Grid to be zoomed [1D-array address]: `float *U_n`
+    * Spacing between points before zooming: `float h_n`
+    * Spacing between points after zooming: `float h_m`
     * Grid size after zooming: `int M`
     * Result of the grid: `float *U_m`
+  * **NOTES:**
+    1. The grid before zooming is binded to the texture memory, so no need to pass in the pointer to the kernel.
 
 * **NOTES:**
   1. Restriction is specific on residual, and since we only don't do relaxation on the boundary, so the boundary of restriction target grid is always "0".
+  1. The boundary of prolongation target grid is "0".
 
