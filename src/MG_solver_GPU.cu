@@ -462,7 +462,7 @@ __global__ void ker_Zoom_GPU(int N, float h_n, int M, float h_m, float *U_m){
 	float a, c;		// the ratio of the coarse grid point to the first met lower left fine grid index in x-dir, y-dir
 					// Should be between 0 <= a,c < 1
 	float b, d;		// ratio
-
+	float bl, br, tl, tr; 	// value of the bottom left/right and top left/right
 
 	while( index_m < M*M ){
 		// Parse the index_m
@@ -477,16 +477,21 @@ __global__ void ker_Zoom_GPU(int N, float h_n, int M, float h_m, float *U_m){
 			// Calculate the ratio and the lower left grid_n index
 			ix_n = (int) floorf((float)ix_m * h_m / h_n);
 			iy_n = (int) floorf((float)iy_m * h_m / h_n);
+			index_n = ix_n + iy_n * N;
 			a = fmodf((float)ix_m * h_m, h_n) / h_n;
 			c = fmodf((float)iy_m * h_m, h_n) / h_n;
 			b = 1.0 - a;
 			d = 1.0 - c;
-			index_n = ix_n + iy_n * N;
 
-			// TODO:Start from here~
-			U_m[index_m] = b * d * U_f[index_f] + a * d * U_f[index_f+1] + c * b * U_f[index_f+N] + a * c * U_f[index_f+N+1];
+			// Fetch the value
+			bl = tex1Dfetch(texMem_float, index_n);
+			br = tex1Dfetch(texMem_float, index_n + 1);
+			tl = tex1Dfetch(texMem_float, index_n + N);
+			tr = tex1Dfetch(texMem_float, index_n + N + 1);
+
+			// Zooming and store inside U_m
+			U_m[index_m] = b * d * bl + a * d * br + c * b * tl + a * c * tr;
 		}
-
 
 		// Stride
 		index_m = index_m + blockDim.x * gridDim.x;
