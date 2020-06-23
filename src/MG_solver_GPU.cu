@@ -785,6 +785,67 @@ void doRestriction_GPU(int N, double *U_f, int M, double *U_c){
 	free(h_Uc);
 }
 
+void doProlongation_GPU(int N, double *U_c, int M, double *U_f){
+
+	// Settings
+	double h_c = 1.0 / (double) (N - 1);	// spacing in coarser grid
+	double h_f = 1.0 / (double) (M - 1);	// spacing in finer grid
+
+	// Settings for GPU
+	int blocksPerGrid = 10;
+	int threadsPerBlock = 10;
+	float *d_Uc, *d_Uf;
+	float *h_Uc, *h_Uf;
+	
+	/*
+	CPU Part
+	*/
+	// Allocate host memory
+	h_Uc = (float*) malloc(N * N * sizeof(float));
+	h_Uf = (float*) malloc(M * M * sizeof(float));
+
+	// Transfer data from double to float
+	#	pragma omp parallel for
+	for(int i = 0; i < N*N; i = i+1){
+		h_Uc[i] = (float) U_c[i];
+	}
+
+	/*
+	GPU Part
+	*/
+	// Allocate device memory
+	cudaMalloc((void**)&d_Uc, N * N * sizeof(float));
+	cudaMalloc((void**)&d_Uf, M * M * sizeof(float));
+
+	// Bind d_Uc to texture memory
+	cudaBindTexture(NULL, texMem_float, d_Uc, N * N * sizeof(float));
+
+	// Copy data to device memory and initialize d_Uf as zeros
+	cudaMemcpy(d_Uc, h_Uc, N * N * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemset(d_Uf, 0.0, M * M * sizeof(float));
+
+	free(h_Uc);		// h_Uc is no longer needed
+	
+	// Call the kernel
+	ker_Zoom_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float) h_c, M, (float) h_f, d_Uf);
+
+	// Copy data back to host memory
+	cudaMemcpy(h_Uf, d_Uf, M * M * sizeof(float), cudaMemcpyDeviceToHost);
+
+	// Unbind texture memory and free the device memory
+	cudaUnbindTexture(texMem_float);
+	cudaFree(d_Uf);
+	cudaFree(d_Uc);
+
+	// Transfer data from float to double
+	#	pragma omp parallel for
+	for(int i = 0; i < M*M; i = i+1){
+		U_f[i] = (double) h_Uf[i];
+	}
+
+	free(h_Uf);	
+}
+
 void doPrint(int N, double *U){
 	for(int j = N-1; j >= 0; j = j-1){
 		for(int i = 0; i < N; i = i+1){
@@ -998,3 +1059,4 @@ void GaussSeidel_GPU_Single(int N, double L, double *U, double *F, double target
 	free(h_err);
 	free(h_U);
 }
+
