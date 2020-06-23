@@ -229,7 +229,7 @@ int main( int argc, char *argv[] ){
 	
 	cudaEventRecord(start, 0);
 	
-	doRestriction_GPU(N, Uf, M, Uc_CPU);
+	doRestriction(N, Uf, M, Uc_CPU);
 	
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
