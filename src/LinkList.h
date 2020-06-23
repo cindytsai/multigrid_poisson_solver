@@ -11,50 +11,50 @@ using namespace std;
 class ListNode {
 private:
 	// _N: size of this level
-	int          _N;
-	int          _Level;   //start from 0;
-	ListNode *   _next;
-	ListNode *   _prev;
+	int          N;
+	int          Level;   //start from 0;
+	ListNode *   next;
+	ListNode *   prev;
 
-	double *_U, *_F, *_D;
+	double *U, *F, *D;
 
 public:
-	ListNode(int n, int l): _N(n),_Level(l),_next(0),_prev(0){
-		_U = (double *)malloc(n * n * sizeof(double));
-		_F = (double *)malloc(n * n * sizeof(double));
-		_D = (double *)malloc(n * n * sizeof(double));
+	ListNode(int n, int l): N(n),Level(l),next(0),prev(0){
+		U = (double *)malloc(n * n * sizeof(double));
+		F = (double *)malloc(n * n * sizeof(double));
+		D = (double *)malloc(n * n * sizeof(double));
 
 	};
 	~ListNode(){
-		free(_U);
-		free(_F);
-		free(_D);
+		free(U);
+		free(F);
+		free(D);
 	};
-	double* Get_U(){ return _U;};
-	double* Get_F(){ return _F;};
-	double* Get_D(){ return _D;};
-	int Get_N(){ return _N;};
-	ListNode* Get_prev(){ return _prev;};
+	double* Get_U(){ return U;};
+	double* Get_F(){ return F;};
+	double* Get_D(){ return D;};
+	int Get_N(){ return N;};
+	ListNode* Get_prev(){ return prev;};
 	friend class LinkedList;
 };
 
 class LinkedList {
 private:
 	// first : pointer of the first node.
-	ListNode *_first;
-	ListNode *_last;
-	double _L;
-	int _level_N[10]={0};  //maximum level = 10
+	ListNode *first;
+	ListNode *last;
+	double L;
+	int level_N[10]={0};  //maximum level = 10
 public:
-	LinkedList(int N):_L(LENGTH){
-		_first = new ListNode(N, 0);
-		_last = _first;
-		_level_N[0]=N;
+	LinkedList(int N):L(LENGTH){
+		first = new ListNode(N, 0);
+		last = first;
+		level_N[0]=N;
 		for(int i=1; i<10; i++){
-			int n_prev = _level_N[i-1];
+			int n_prev = level_N[i-1];
 			if(n_prev<5) break;
-			if (n_prev%2 ==0) _level_N[i]=(n_prev+2)/2;
-			else _level_N[i]=(n_prev+1)/2;
+			if (n_prev%2 ==0) level_N[i]=(n_prev+2)/2;
+			else level_N[i]=(n_prev+1)/2;
 		}
 	};
 	~LinkedList(){
@@ -63,36 +63,36 @@ public:
 	void Push();
 	void Pop();
 	void Clear();
-	int Get_level_now(){return _last->_Level;};
-	int Get_N(int level){return _level_N[level];};
-	double Get_L(){return _L;};
-	ListNode* Get_coarsest_node(){ return _last;};
+	int Get_level_now(){return last->Level;};
+	int Get_N(int level){return level_N[level];};
+	double Get_L(){return L;};
+	ListNode* Get_coarsest_node(){ return last;};
 
 };
 
 
 void LinkedList::Push(){
-	assert(_level_N[_last->_Level+1]!=0);
-	ListNode *newNode = new ListNode(_level_N[_last->_Level+1], _last->_Level+1);
-	newNode -> _prev = _last;
-	_last -> _next = newNode;
-	_last = newNode;
+	assert(level_N[last->Level+1]!=0);
+	ListNode *newNode = new ListNode(level_N[last->Level+1], last->Level+1);
+	newNode -> prev = last;
+	last -> next = newNode;
+	last = newNode;
 }
 
 void LinkedList::Pop(){
-	ListNode *todelete = _last;
-	assert(_last->_prev !=0);
-	_last = _last -> _prev;
-	_last -> _next = 0;
+	ListNode *todelete = last;
+	assert(last->prev !=0);
+	last = last -> prev;
+	last -> next = 0;
 	delete todelete;
 
 }
 
 
 void LinkedList::Clear() {
-	while (_first != 0) {
-		ListNode *current = _first;
-		_first = _first->_next;
+	while (first != 0) {
+		ListNode *current = first;
+		first = first->next;
 		delete current;  // Delete node as well
 	}
 }
