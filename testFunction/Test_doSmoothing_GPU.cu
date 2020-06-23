@@ -1,5 +1,5 @@
 /*
- nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp Test_getSource_GPU.cu
+ nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp Test_doSmoothing_GPU.cu
  */
 #include <stdio.h>
 #include <stdlib.h>
