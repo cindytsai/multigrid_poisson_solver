@@ -211,8 +211,8 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 
 	// Copy data to device memory
 	cudaMemcpy( d_U,  h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
+	cudaMemcpy( d_F,  h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 
 	free(h_F);    // h_F are no longer needed
 
@@ -264,7 +264,6 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	free(h_err);
 	free(h_U);
 }
-
 
 int main( int argc, char *argv[] ){
 	double L = 1.0;

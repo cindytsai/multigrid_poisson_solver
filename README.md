@@ -143,7 +143,8 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
   
 ## GPU Functions
 All of the grids are stored as 1D array, with size N x N, including the boundary.
-Since the GPU is specialized in doing single precision computation, all the subroutine function of calling GPU kernal are using `single precision`, only ExactSolver is `double precision`. After calling GPU kernel, typecasting back to `double precision`.
+Since the GPU is specialized in doing single precision computation, all the subroutine function of calling GPU kernal are using `single precision`. After calling GPU kernel, typecasting back to `double precision`.
+Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out that it's tooooo slow.
 
 ### Source (Problem Dependent)
 * void getSource_GPU: Get the discretize form of the source function of size N x N. Change made inside `double *F`.
@@ -222,43 +223,79 @@ Since the GPU is specialized in doing single precision computation, all the subr
     * Target error: `double target_error`
     * Solver options: `int option`
       * `option == 0`: _blank_
-      * `option == 1`: use Gauss-Seidel, with even/odd method.
+      * `option == 1`: use Gauss-Seidel, with even/odd method, GPU kernel in `double precision`.
+      * `option == 2`: use Gauss-Seidel, with even/odd method, GPU kernel in `single precision`.
 
 #### Gauss-Seidel Relaxation Method
-* void GaussSeidel_GPU: Change made inside exact solution `double *U`. Relax till it reaches the target error.
-  * Input Variable:
-    * Grid size: `int N`
-    * Interest Region length L: `double L`
-    * Exact solution [1D-array address]: `double *U`
-    * Source Term [1D-array address]: `double *F`
-    * Target error: `double target_error`
-  * **NOTES:**
-    1. Write two kernel, one deals with even index, the other deals with odd index.
-    1. 
-  * **TODOs if have time:**
-    - [ ] Try using sync with all threads within a grid _Cooperative Kernel_, which means forge two kernels together.
+* Double Precision
+  * void GaussSeidel_GPU_Double: Change made inside exact solution `double *U`. Relax till it reaches the target error.
+    * Input Variable:
+      * Grid size: `int N`
+      * Interest Region length L: `double L`
+      * Exact solution [1D-array address]: `double *U`
+      * Source Term [1D-array address]: `double *F`
+      * Target error: `double target_error`
 
-* \_\_global\_\_ void ker_GaussSeideleven_GPU: Change made inside `double *U`, update even index only.
-  * Input Variable:
-    * Grid size: `int N`
-    * delta x: `double h`
-    * Approximation solution [1D-array address]: `double *U`
-    * Souce f [1D-array address]: `double *F`
+  * \_\_global\_\_ void ker_GaussSeideleven_GPU_Double: Change made inside `double *U`, update even index only.
+    * Input Variable:
+      * Grid size: `int N`
+      * delta x: `double h`
+      * Approximation solution [1D-array address]: `double *U`
+      * Souce f [1D-array address]: `double *F`
 
-* \_\_global\_\_ void ker_GaussSeidelodd_GPU: Change made inside `double *U`, update odd index only.
-  * Input Variable:
-    * Grid size: `int N`
-    * delta x: `double h`
-    * Approximation solution [1D-array address]: `double *U`
-    * Souce f [1D-array address]: `double *F`
+  * \_\_global\_\_ void ker_GaussSeidelodd_GPU_Double: Change made inside `double *U`, update odd index only.
+    * Input Variable:
+      * Grid size: `int N`
+      * delta x: `double h`
+      * Approximation solution [1D-array address]: `double *U`
+      * Souce f [1D-array address]: `double *F`
 
-* \_\_global\_\_ void ker_Error_GPU: Get the error of U, define as Sum( | Lu - F | ) / (N * N).
-  * Input Variable:
-    * Grid size: `int N`
-    * delta x: `double h`
-    * Approximation solution [1D-array address]: `double *U`
-    * Souce f [1D-array address]: `double *F`
-    * Error array [1D-array address]: `double *err`
+  * \_\_global\_\_ void ker_Error_GPU_Double: Get the error of U, define as Sum( | Lu - F | ) / (N * N).
+    * Input Variable:
+      * Grid size: `int N`
+      * delta x: `double h`
+      * Approximation solution [1D-array address]: `double *U`
+      * Souce f [1D-array address]: `double *F`
+      * Error array [1D-array address]: `double *err`
+
+* Single Precision
+  * void GaussSeidel_GPU_Single: Change made inside exact solution `double *U`. Relax till it reaches the target error.
+    * Input Variable:
+      * Grid size: `int N`
+      * Interest Region length L: `double L`
+      * Exact solution [1D-array address]: `double *U`
+      * Source Term [1D-array address]: `double *F`
+      * Target error: `double target_error`
+  
+  * \_\_global\_\_ void ker_GaussSeideleven_GPU_Single: Change made inside `float *U`, update even index only.
+    * Input Variable:
+      * Grid size: `int N`
+      * delta x: `float h`
+      * Approximation solution [1D-array address]: `float *U`
+      * Souce f [1D-array address]: `float *F`
+
+  * \_\_global\_\_ void ker_GaussSeidelodd_GPU_Single: Change made inside `float *U`, update odd index only.
+    * Input Variable:
+      * Grid size: `int N`
+      * delta x: `float h`
+      * Approximation solution [1D-array address]: `float *U`
+      * Souce f [1D-array address]: `float *F`
+
+  * \_\_global\_\_ void ker_Error_GPU_Single: Get the error of U, define as Sum( | Lu - F | ) / (N * N).
+    * Input Variable:
+      * Grid size: `int N`
+      * delta x: `float h`
+      * Approximation solution [1D-array address]: `float *U`
+      * Souce f [1D-array address]: `float *F`
+      * Error array [1D-array address]: `float *err`  
+
+* **NOTES:**
+  1. Write two kernel, one deals with even index, the other deals with odd index, so that we can make sure that updates on even/odd are all done.
+
+* **TODOs if have time:**
+  - [ ] Try using sync with all threads within a grid _Cooperative Kernel_, which means forge two kernels together.
+
+
 
 ### Restriction / Prolongation
 * void doRestriction: Change made inside `double *U_c`
@@ -278,10 +315,14 @@ Since the GPU is specialized in doing single precision computation, all the subr
 * \_\_global\_\_ void ker_Zoom_GPU: Zoom in/out from grid size `int N` to grid size `int M`. The final result is inside `float *U_m`.
   * Input Variable:
     * Grid size before zooming: `int N`
-    * Grid to be zoomed [1D-array address]: `float *U_n`
+    * Spacing between points before zooming: `float h_n`
+    * Spacing between points after zooming: `float h_m`
     * Grid size after zooming: `int M`
     * Result of the grid: `float *U_m`
+  * **NOTES:**
+    1. The grid before zooming is binded to the texture memory, so no need to pass in the pointer to the kernel.
 
 * **NOTES:**
   1. Restriction is specific on residual, and since we only don't do relaxation on the boundary, so the boundary of restriction target grid is always "0".
+  1. The boundary of prolongation target grid is "0".
 
