@@ -605,7 +605,6 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	int l, r, t, b;		// Index of the neighbers
 
 	int *ieven, *iodd;	// Index of even / odd chestbox
-	double *U_old;		// For storing U during iteration
 	double *Residual; 	// Get the residual to compute the error
 
 	/*
@@ -613,7 +612,6 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	 */
 	ieven = (int*) malloc(((N * N) / 2) * sizeof(int));
 	iodd  = (int*) malloc(((N * N) / 2) * sizeof(int));
-	U_old = (double*) malloc(N * N * sizeof(double));
 	Residual = (double*) malloc(N * N * sizeof(double));
 
 	// For even chestbox index
@@ -638,7 +636,6 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 	}
 
 	// Initialize
-	memset(U_old, 0.0, N * N * sizeof(double));
 	memset(U, 0.0, N * N * sizeof(double));
 
 	// Start the Gauss-Seidel Iteration
@@ -666,7 +663,7 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 				b = ix + (iy - 1) * N;
 
 				// Update result to U
-				U[index] = 0.25 * (U_old[l] + U_old[r] + U_old[t] + U_old[b] - pow(h, 2) * F[index]);
+				U[index] = 0.25 * (U[l] + U[r] + U[t] + U[b] - pow(h, 2) * F[index]);
 			}
 
 			// Update odd chestbox
@@ -706,15 +703,11 @@ void GaussSeidel(int N, double L, double *U, double *F, double target_error){
 			}
 		}
 		err = err / (double)((N - 2) * (N - 2));
-
-		// Move U to U_old and start the next iteration
-		memcpy(U_old, U, sizeof(double) * N * N);
 	}
 
 	// Free the temperary resource
 	free(ieven);
 	free(iodd);
-	free(U_old);
 	free(Residual);
 }
 
