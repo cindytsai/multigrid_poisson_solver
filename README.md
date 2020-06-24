@@ -17,6 +17,8 @@ Suppose the interest region is a square only.
 |       F       | Discretize source function to size N x N. | double*, 1-D array address |
 |       D       | Residual of size N x N.                   | double*, 1-D array address |
 
+![Definition](/res/Definition.jpg)
+
 ## Workflow and Structure
 phi = ... </br>
 N = ..</br>
@@ -171,8 +173,6 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
     * Approximate solution [1D-array address]: `double *U`
     * Source f [1D-array address]: `double *F`
     * Residual d [1D-array address]: `dobule *D`
-  * **TODOs if have time:**
-    - [ ] Increase the performance with Source term `double *F` and Approximate solution `double *U` using texture memory.
 
 * \_\_global\_\_ void ker_Residual_GPU: Get the residual d = Lu - f, changes made inside `float D`
   * Input Variable:
