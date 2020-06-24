@@ -135,7 +135,7 @@ int main(){
 	error = error/N/N;
 
 	printf("error = %f\n", error);
-	strcpy(file_name, "Two_Grid-test.txt");
+	strcpy(file_name, "MG_CPU_Test.txt");
 	doPrint2File(N, U, file_name);
 
 

@@ -152,7 +152,7 @@ int main(){
 	error = error/N/N;
 
 	printf("error = %f\n", error);
-	strcpy(file_name, "Two_Grid-test.txt");
+	strcpy(file_name, "MG_GPU_Test.txt");
 	doPrint2File(N, U, file_name);
 
 	delete list;
