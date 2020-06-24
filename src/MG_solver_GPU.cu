@@ -39,8 +39,10 @@ void GaussSeidel_GPU_Single(int, double, double*, double*, double);
 Global Variable
  */
 // declare the texture memory for GPU functions
-__align__(8) texture<float> texMem_float1;
-__align__(8) texture<float> texMem_float2;
+__align__(8)  texture<float>  texMem_float1;
+__align__(8)  texture<float>  texMem_float2;
+__align__(16) texture<double> texMem_double1;
+__align__(16) texture<double> texMem_double2;
 
 int main(){
 	// Settings for GPU
@@ -316,7 +318,7 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, int iter,
 
 __global__ void ker_GaussSeideleven_GPU_Double(int N, double h, double *U){
 	// Texture memory
-	// texMem_float2 -> F
+	// texMem_double2 -> F
 	
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -342,7 +344,7 @@ __global__ void ker_GaussSeideleven_GPU_Double(int N, double h, double *U){
 			t = U[ix + N*(iy+1)];
 			d = U[ix + N*(iy-1)];
 
-			U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_float2, index));
+			U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_double2, index));
 		}
 		
 		// Stride
@@ -386,7 +388,7 @@ __global__ void ker_GaussSeideleven_GPU_Single(int N, float h, float *U, float *
 
 __global__ void ker_GaussSeidelodd_GPU_Double(int N, double h, double *U){
 	// Texture memory
-	// texMem_float2 -> F
+	// texMem_double2 -> F
 	
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -412,7 +414,7 @@ __global__ void ker_GaussSeidelodd_GPU_Double(int N, double h, double *U){
 			t = U[ix + N*(iy+1)];
 			d = U[ix + N*(iy-1)];
 
-			U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_float2, index));
+			U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_double2, index));
 		}
 		
 		// Stride
@@ -456,7 +458,7 @@ __global__ void ker_GaussSeidelodd_GPU_Single(int N, float h, float *U, float *F
 
 __global__ void ker_Error_GPU_Double(int N, double h, double *U, double *err){
 	// Texture memory
-	// texMem_float2 -> F
+	// texMem_double2 -> F
 
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ __align__(sizeof(double)) unsigned char cache_error_double[];
@@ -487,7 +489,7 @@ __global__ void ker_Error_GPU_Double(int N, double h, double *U, double *err){
 			d = U[ix + N*(iy-1)];
 			c = U[index];
 
-			diff = diff + fabs( ( (l + r + t + d - 4.0 * c) / (h * h) ) - tex1Dfetch(texMem_float2, index));
+			diff = diff + fabs( ( (l + r + t + d - 4.0 * c) / (h * h) ) - tex1Dfetch(texMem_double2, index));
 		}
 
 		// Stride
@@ -1056,7 +1058,7 @@ void GaussSeidel_GPU_Double(int N, double L, double *U, double *F, double target
 	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(double));
 
 	// Bind to texture memory
-	cudaBindTexture(NULL, texMem_float2, d_F, N * N * sizeof(double));
+	cudaBindTexture(NULL, texMem_double2, d_F, N * N * sizeof(double));
 
 	// Copy data to device memory
 	cudaMemset(d_U, 0.0, N * N * sizeof(double));
@@ -1085,7 +1087,7 @@ void GaussSeidel_GPU_Double(int N, double L, double *U, double *F, double target
 	cudaMemcpy(U, d_U, N * N * sizeof(double), cudaMemcpyDeviceToHost);
 
 	// Unbind texture memory
-	cudaUnbindTexture(texMem_float2);
+	cudaUnbindTexture(texMem_double2);
 
 	// Free the device memory
 	cudaFree(d_U);
