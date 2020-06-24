@@ -171,16 +171,14 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
     * Approximate solution [1D-array address]: `double *U`
     * Source f [1D-array address]: `double *F`
     * Residual d [1D-array address]: `dobule *D`
-  * **TODOs if have time:**
-    - [ ] Increase the performance with Source term `double *F` and Approximate solution `double *U` using texture memory.
 
 * \_\_global\_\_ void ker_Residual_GPU: Get the residual d = Lu - f, changes made inside `float D`
   * Input Variable:
     * Grid size: `int N`
     * delta x: `float h`
-    * Approximate solution [1D-array address]: `float *U`
-    * Source f [1D-array address]: `float *F`
     * Residual d [1D-array address]: `float *D`
+  * **NOTES:**
+    * Usinge texture memory in `float *U` and `float *F`, so no need to pass the variable to kernel.
 
 ### Smoothing
 * void doSmoothing_GPU: Change made inside `double *U`, and save the error from the latest smoothing in `double *error`.
@@ -205,10 +203,10 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
     * delta x: `float h`
     * Approximate solution [1D-array address]: `float *U`
     * U_old [1D-array addreses]: `float *U0`
-    * Source f [1D-array address]: `float *F`
     * Current numbers of iterations: `int iter`
     * Error array [1D-array address]: `float *err`
   * **NOTES:**
+    * Using texture memory on `float *F`, so no need to passing in to kernel function.
     * Changes made after `step` steps
       * If `step` is odd  :  get `d_U`
       * If `step` is even :  get `d_U0`
@@ -241,22 +239,22 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
       * Grid size: `int N`
       * delta x: `double h`
       * Approximation solution [1D-array address]: `double *U`
-      * Souce f [1D-array address]: `double *F`
 
   * \_\_global\_\_ void ker_GaussSeidelodd_GPU_Double: Change made inside `double *U`, update odd index only.
     * Input Variable:
       * Grid size: `int N`
       * delta x: `double h`
       * Approximation solution [1D-array address]: `double *U`
-      * Souce f [1D-array address]: `double *F`
 
   * \_\_global\_\_ void ker_Error_GPU_Double: Get the error of U, define as Sum( | Lu - F | ) / (N * N).
     * Input Variable:
       * Grid size: `int N`
       * delta x: `double h`
       * Approximation solution [1D-array address]: `double *U`
-      * Souce f [1D-array address]: `double *F`
       * Error array [1D-array address]: `double *err`
+
+  * **NOTES:**
+    1. Bind the source term `double *F` to texture memory, so no need to pass to kernel function.
 
 * Single Precision
   * void GaussSeidel_GPU_Single: Change made inside exact solution `double *U`. Relax till it reaches the target error.

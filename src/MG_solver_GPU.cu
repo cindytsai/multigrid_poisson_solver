@@ -10,11 +10,11 @@ GPU kernel
 __global__ void ker_Source_GPU(int, float, float*, float, float);
 __global__ void ker_Residual_GPU(int, float, float*);
 __global__ void ker_Smoothing_GPU(int, float, float*, float*, int, float*);
-__global__ void ker_GaussSeideleven_GPU_Double(int, double, double*, double*);
+__global__ void ker_GaussSeideleven_GPU_Double(int, double, double*);
 __global__ void ker_GaussSeideleven_GPU_Single(int, float, float*, float*);
-__global__ void ker_GaussSeidelodd_GPU_Double(int, double, double*, double*);
+__global__ void ker_GaussSeidelodd_GPU_Double(int, double, double*);
 __global__ void ker_GaussSeidelodd_GPU_Single(int, float, float*, float*);
-__global__ void ker_Error_GPU_Double(int, double, double*, double*, double*);
+__global__ void ker_Error_GPU_Double(int, double, double*, double*);
 __global__ void ker_Error_GPU_Single(int, float, float*, float*, float*);
 __global__ void ker_Zoom_GPU(int, float, int, float, float*);
 
@@ -314,7 +314,10 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, int iter,
 	}
 }
 
-__global__ void ker_GaussSeideleven_GPU_Double(int N, double h, double *U, double *F){
+__global__ void ker_GaussSeideleven_GPU_Double(int N, double h, double *U){
+	// Texture memory
+	// texMem_float2 -> F
+	
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
@@ -339,7 +342,7 @@ __global__ void ker_GaussSeideleven_GPU_Double(int N, double h, double *U, doubl
 			t = U[ix + N*(iy+1)];
 			d = U[ix + N*(iy-1)];
 
-			U[index] = 0.25 * (l + r + t + d - h * h * F[index]);
+			U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_float2, index));
 		}
 		
 		// Stride
@@ -381,7 +384,10 @@ __global__ void ker_GaussSeideleven_GPU_Single(int N, float h, float *U, float *
 	}
 }
 
-__global__ void ker_GaussSeidelodd_GPU_Double(int N, double h, double *U, double *F){
+__global__ void ker_GaussSeidelodd_GPU_Double(int N, double h, double *U){
+	// Texture memory
+	// texMem_float2 -> F
+	
 	// Settings
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int parity, ix, iy;
@@ -406,7 +412,7 @@ __global__ void ker_GaussSeidelodd_GPU_Double(int N, double h, double *U, double
 			t = U[ix + N*(iy+1)];
 			d = U[ix + N*(iy-1)];
 
-			U[index] = 0.25 * (l + r + t + d - h * h * F[index]);
+			U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_float2, index));
 		}
 		
 		// Stride
@@ -448,7 +454,10 @@ __global__ void ker_GaussSeidelodd_GPU_Single(int N, float h, float *U, float *F
 	}
 }
 
-__global__ void ker_Error_GPU_Double(int N, double h, double *U, double *F, double *err){
+__global__ void ker_Error_GPU_Double(int N, double h, double *U, double *err){
+	// Texture memory
+	// texMem_float2 -> F
+
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ __align__(sizeof(double)) unsigned char cache_error_double[];
 	double *cache = reinterpret_cast<double *>(cache_error_double);
@@ -478,7 +487,7 @@ __global__ void ker_Error_GPU_Double(int N, double h, double *U, double *F, doub
 			d = U[ix + N*(iy-1)];
 			c = U[index];
 
-			diff = diff + fabs( ( (l + r + t + d - 4.0 * c) / (h * h) ) - F[index] );
+			diff = diff + fabs( ( (l + r + t + d - 4.0 * c) / (h * h) ) - tex1Dfetch(texMem_float2, index));
 		}
 
 		// Stride
@@ -1046,6 +1055,9 @@ void GaussSeidel_GPU_Double(int N, double L, double *U, double *F, double target
 	cudaMalloc((void**)&d_F , N * N * sizeof(double));
 	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(double));
 
+	// Bind to texture memory
+	cudaBindTexture(NULL, texMem_float2, d_F, N * N * sizeof(double));
+
 	// Copy data to device memory
 	cudaMemset(d_U, 0.0, N * N * sizeof(double));
 	cudaMemcpy(d_F, F, N * N * sizeof(double), cudaMemcpyHostToDevice);
@@ -1053,11 +1065,11 @@ void GaussSeidel_GPU_Double(int N, double L, double *U, double *F, double target
 	// Do the iteration until it is smaller than the target_error
 	while( error > target_error ){
 		// Iteration Even / Odd index
-		ker_GaussSeideleven_GPU_Double <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
-		ker_GaussSeidelodd_GPU_Double <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U, d_F);
+		ker_GaussSeideleven_GPU_Double <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U);
+		ker_GaussSeidelodd_GPU_Double <<< blocksPerGrid, threadsPerBlock >>> (N, h, d_U);
 		
 		// Get the error
-		ker_Error_GPU_Double <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_F, d_err);
+		ker_Error_GPU_Double <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, h, d_U, d_err);
 		cudaMemcpy(h_err, d_err, blocksPerGrid * sizeof(double), cudaMemcpyDeviceToHost);
 
 		// Calculate the error from error array
@@ -1066,10 +1078,14 @@ void GaussSeidel_GPU_Double(int N, double L, double *U, double *F, double target
 			error = error + h_err[i];
 		}
 		error = error / (double)(N*N);
+		printf("error=%lf\n", error);
 	}
 
 	// Copy data back to host memory
 	cudaMemcpy(U, d_U, N * N * sizeof(double), cudaMemcpyDeviceToHost);
+
+	// Unbind texture memory
+	cudaUnbindTexture(texMem_float2);
 
 	// Free the device memory
 	cudaFree(d_U);
