@@ -9,7 +9,7 @@ GPU kernel
  */
 __global__ void ker_Source_GPU(int, float, float*, float, float);
 __global__ void ker_Residual_GPU(int, float, float*);
-__global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
+__global__ void ker_Smoothing_GPU(int, float, float*, float*, int, float*);
 __global__ void ker_GaussSeideleven_GPU_Double(int, double, double*, double*);
 __global__ void ker_GaussSeideleven_GPU_Single(int, float, float*, float*);
 __global__ void ker_GaussSeidelodd_GPU_Double(int, double, double*, double*);
@@ -235,8 +235,10 @@ __global__ void ker_Residual_GPU(int N, float h, float *D){
 	__syncthreads();
 }
 
-__global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F, int iter, float *err){
-	
+__global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, int iter, float *err){
+	// Texture memory
+	// texMem_float2 -> F
+
 	// Settings for parallel reduction to calculate the error array 
 	extern __shared__ __align__(sizeof(float)) unsigned char cache_smoothing[];
 	float *cache = reinterpret_cast<float *>(cache_smoothing);
@@ -270,7 +272,7 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F,
 				t = U0[ix + N*(iy+1)];
 				d = U0[ix + N*(iy-1)];
 
-				U[index] = 0.25 * (l + r + t + d - h * h * F[index]);
+				U[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_float2, index));
 			}
 			else{
 				// Update in U0
@@ -280,7 +282,7 @@ __global__ void ker_Smoothing_GPU(int N, float h, float *U, float *U0, float *F,
 				t = U[ix + N*(iy+1)];
 				d = U[ix + N*(iy-1)];
 
-				U0[index] = 0.25 * (l + r + t + d - h * h * F[index]);
+				U0[index] = 0.25 * (l + r + t + d - h * h * tex1Dfetch(texMem_float2, index));
 			}
 			diff = diff + fabsf( (U[index] - U0[index]) * 4.0 / (h * h) );
 		}
@@ -764,6 +766,9 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	cudaMalloc((void**)&d_F , N * N * sizeof(float));
 	cudaMalloc((void**)&d_err, blocksPerGrid * sizeof(float));
 
+	// Bind d_F to texture memory
+	cudaBindTexture(NULL, texMem_float2, d_F, N * N * sizeof(float));
+
 	// Copy data to device memory
 	cudaMemcpy( d_U,  h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U0,  d_U, N * N * sizeof(float), cudaMemcpyDeviceToDevice);
@@ -774,12 +779,12 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	// Do the iteration with "step" steps
 	while( iter <= step ){
 		
-		ker_Smoothing_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_U0, d_F, iter, d_err);
+		ker_Smoothing_GPU <<< blocksPerGrid, threadsPerBlock, sharedMemorySize >>> (N, (float) h, d_U, d_U0, iter, d_err);
 		
 		iter = iter + 1;
 
 	}
-	
+
 	// Copy data back to host memory
 	// d_err -> h_err
 	// d_U   -> h_U   if step is odd
@@ -791,6 +796,9 @@ void doSmoothing_GPU(int N, double L, double *U, double *F, int step, double *er
 	else{
 		cudaMemcpy(h_U, d_U0, N * N * sizeof(float), cudaMemcpyDeviceToHost);
 	}
+
+	// Unbind texture memory
+	cudaUnbindTexture(texMem_float2);
 
 	// Free the device memory
 	cudaFree(d_U);
