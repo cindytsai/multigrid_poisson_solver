@@ -8,7 +8,7 @@
 GPU kernel
  */
 __global__ void ker_Source_GPU(int, float, float*, float, float);
-__global__ void ker_Residual_GPU(int, float, float*, float*, float*);
+__global__ void ker_Residual_GPU(int, float, float*);
 __global__ void ker_Smoothing_GPU(int, float, float*, float*, float*, int, float*);
 __global__ void ker_GaussSeideleven_GPU_Double(int, double, double*, double*);
 __global__ void ker_GaussSeideleven_GPU_Single(int, float, float*, float*);
@@ -39,7 +39,8 @@ void GaussSeidel_GPU_Single(int, double, double*, double*, double);
 Global Variable
  */
 // declare the texture memory for GPU functions
-__align__(8) texture<float> texMem_float;
+__align__(8) texture<float> texMem_float1;
+__align__(8) texture<float> texMem_float2;
 
 int main(){
 	// Settings for GPU
@@ -198,7 +199,11 @@ __global__ void Boundary_GPU(int N, float L, float *F, float min_x, float min_y)
 
 }
 
-__global__ void ker_Residual_GPU(int N, float h, float *U, float *F, float *D){
+__global__ void ker_Residual_GPU(int N, float h, float *D){
+	// Texture Memory
+	// texMem_float1 -> U
+	// texMem_float2 -> F
+
 	// Thread index inside the GPU kernel
 	int index = blockDim.x * blockIdx.x + threadIdx.x;
 	int ix, iy;
@@ -214,12 +219,13 @@ __global__ void ker_Residual_GPU(int N, float h, float *U, float *F, float *D){
 			D[index] = 0.0;
 		}
 		else{
-			c = U[index];
-			l = U[(ix-1) + N*iy];
-			r = U[(ix+1) + N*iy];
-			t = U[ix + N*(iy+1)];
-			d = U[ix + N*(iy-1)];
-			D[index] = ((l + r + t + d - 4.0 * c) / (h * h)) - F[index];
+			c = tex1Dfetch(texMem_float1, index);
+			l = tex1Dfetch(texMem_float1, (ix-1) + N*iy);
+			r = tex1Dfetch(texMem_float1, (ix+1) + N*iy);
+			t = tex1Dfetch(texMem_float1, ix + N*(iy+1));
+			d = tex1Dfetch(texMem_float1, ix + N*(iy-1));
+
+			D[index] = ((l + r + t + d - 4.0 * c) / (h * h)) - tex1Dfetch(texMem_float2, index);
 		}
 
 		// Stride
@@ -587,10 +593,10 @@ __global__ void ker_Zoom_GPU(int N, float h_n, int M, float h_m, float *U_m){
 			d = 1.0 - c;
 
 			// Fetch the value
-			bl = tex1Dfetch(texMem_float, index_n);
-			br = tex1Dfetch(texMem_float, index_n + 1);
-			tl = tex1Dfetch(texMem_float, index_n + N);
-			tr = tex1Dfetch(texMem_float, index_n + N + 1);
+			bl = tex1Dfetch(texMem_float1, index_n);
+			br = tex1Dfetch(texMem_float1, index_n + 1);
+			tl = tex1Dfetch(texMem_float1, index_n + N);
+			tr = tex1Dfetch(texMem_float1, index_n + N + 1);
 
 			// Zooming and store inside U_m
 			U_m[index_m] = b * d * bl + a * d * br + c * b * tl + a * c * tr;
@@ -667,12 +673,18 @@ void getResidual_GPU(int N, double L, double *U, double *F, double *D){
 	cudaMalloc((void**)&d_F, N * N * sizeof(float));
 	cudaMalloc((void**)&d_U, N * N * sizeof(float));
 
+	cudaBindTexture(NULL, texMem_float1, d_U, N * N * sizeof(float));
+	cudaBindTexture(NULL, texMem_float2, d_F, N * N * sizeof(float));
+
 	cudaMemcpy(d_F, h_F, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_U, h_U, N * N * sizeof(float), cudaMemcpyHostToDevice);
 
-	ker_Residual_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_U, d_F, d_D);
+	ker_Residual_GPU <<< blocksPerGrid, threadsPerBlock >>> (N, (float)h, d_D);
 	
 	cudaMemcpy(h_D, d_D, N * N * sizeof(float), cudaMemcpyDeviceToHost);
+
+	cudaUnbindTexture(texMem_float1);
+	cudaUnbindTexture(texMem_float2);
 
 	cudaFree(d_D);
 	cudaFree(d_F);
@@ -860,7 +872,7 @@ void doRestriction_GPU(int N, double *U_f, int M, double *U_c){
 	cudaMalloc((void**)&d_Uc, M * M * sizeof(float));
 
 	// Bind d_Uf to texture memory
-	cudaBindTexture(NULL, texMem_float, d_Uf, N * N * sizeof(float));
+	cudaBindTexture(NULL, texMem_float1, d_Uf, N * N * sizeof(float));
 
 	// Copy data to device memory and initialize d_Uc as zeros
 	cudaMemcpy(d_Uf, h_Uf, N * N * sizeof(float), cudaMemcpyHostToDevice);
@@ -875,7 +887,7 @@ void doRestriction_GPU(int N, double *U_f, int M, double *U_c){
 	cudaMemcpy(h_Uc, d_Uc, M * M * sizeof(float), cudaMemcpyDeviceToHost);
 
 	// Unbind texture memory and free the device memory
-	cudaUnbindTexture(texMem_float);
+	cudaUnbindTexture(texMem_float1);
 	cudaFree(d_Uf);
 	cudaFree(d_Uc);
 
@@ -921,7 +933,7 @@ void doProlongation_GPU(int N, double *U_c, int M, double *U_f){
 	cudaMalloc((void**)&d_Uf, M * M * sizeof(float));
 
 	// Bind d_Uc to texture memory
-	cudaBindTexture(NULL, texMem_float, d_Uc, N * N * sizeof(float));
+	cudaBindTexture(NULL, texMem_float1, d_Uc, N * N * sizeof(float));
 
 	// Copy data to device memory and initialize d_Uf as zeros
 	cudaMemcpy(d_Uc, h_Uc, N * N * sizeof(float), cudaMemcpyHostToDevice);
@@ -936,7 +948,7 @@ void doProlongation_GPU(int N, double *U_c, int M, double *U_f){
 	cudaMemcpy(h_Uf, d_Uf, M * M * sizeof(float), cudaMemcpyDeviceToHost);
 
 	// Unbind texture memory and free the device memory
-	cudaUnbindTexture(texMem_float);
+	cudaUnbindTexture(texMem_float1);
 	cudaFree(d_Uf);
 	cudaFree(d_Uc);
 
@@ -1162,4 +1174,3 @@ void GaussSeidel_GPU_Single(int N, double L, double *U, double *F, double target
 	free(h_err);
 	free(h_U);
 }
-
