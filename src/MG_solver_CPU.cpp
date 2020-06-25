@@ -1,13 +1,14 @@
-#include <cstdio>
-#include <cstdlib>
 #include <stdio.h> 
+#include <iostream>
 #include <stdlib.h> 
 #include <omp.h>
 #include <math.h>
-#include <cstring>
 #include <assert.h>
+#include <string.h>
+#include <fstream>
 #include "LinkList.h"
 
+using namespace std;
 
 #define N_THREADS_OMP 4
 
@@ -34,19 +35,67 @@ void InverseMatrix(int, double, double*, double*);
 void GaussSeidel(int, double, double*, double*, double);
 
 
-int main(){
+int main( int argc, char *argv[] ){
 
 	omp_set_num_threads( N_THREADS_OMP );
+    
     /*
-	Settings
-	cycle: The cycle
-	N:     Grid size
+	Settings of testing different cycle and different grid size N
+	
+		$ ./MG_CPU N cycle_filename.txt
+	                 N:     Initial Grid size
+	cycle_filename.txt:     The cycle structure
 	 */
-	int len = 18;
-	int cycle[len]={-1,-1,-1,0,1,-1,0,1,1,-1,-1,0,1,-1,0,1,1,1};
+	ifstream f_read;
+	int len;
+	int len_count = 0;
+	int *cycle;
+	int N;
+	
+	if( argc != 3){
+		printf("Wrong input parameter.\n");
+		exit(1);
+	}
+	else{
+
+		N = atoi(argv[1]);
+		f_read.open(argv[2]);
+
+		printf("      Initial Grid Size N = %d\n", N);
+		printf("Cycle structure file name = %s\n", argv[2]);
+		
+		if( f_read.is_open() != true ){
+			printf("Cannot open file %s\n", argv[2]);
+			exit(1);
+		}
+		else{
+			/*
+			Start to read the cycle structure
+			 */
+			// Length of the cycle
+			f_read >> len;
+			printf("Cycle Length = %d\n", len);
+			cycle = (int*) malloc(len * sizeof(int));
+			
+			while( f_read.eof() != true ){
+
+				if(len_count >= len){
+					printf("Wrong number of the cycle structure.\n");
+					exit(1);
+				}				
+				
+				f_read >> cycle[len_count];
+				len_count = len_count + 1;
+				cout << len_count << "\n";
+			}
+		}
+
+	}
+
 	//int len = 11;
 	//int cycle[len]={-1,-1,-1,-1,-1,0,1,1,1,1,1};
-	int N = 256;
+
+	// Detail settings for Multigrid Poisson Solver for now
 	int M;
 	int step = 1;
 	char file_name[50];
