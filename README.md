@@ -20,9 +20,47 @@ Suppose the interest region is a square only.
 ![Definition](/res/Definition.jpg)
 
 ## Workflow and Structure
-phi = ... </br>
-N = ..</br>
-cycle = 1D-array = {-1 , -1, 0, 1, 1}</br>
+
+### Compile
+* Compile directly
+Remember to change SM Version for the GPU.
+```
+g++ -fopenmp -o MG_CPU MG_solver_CPU.cpp
+nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp -o $(BIN2) MG_solver_GPU.cu
+```
+* Using `Makefile`
+Change `SMVERSION` to your GPU version.
+```
+make
+```
+Clean up.
+```
+make clean
+```
+
+### Cycle Structure File
+* Rules
+
+| Nodes |             Operations             |
+|:-----:|:----------------------------------:|
+|   -1  | Smoothing and then do restriction. |
+|   0   | Use the exact solver.              |
+|   1   | Do prolongation and the smoothing. |
+
+`Cycle.txt`:
+```
+(Number of Nodes)
+-1
+0
+1
+```
+
+### Run
+**N**: Initial grid size
+**file_name**: Cycle Structure file
+```
+./MG_CPU N file_name
+```
 
 ### Link List Data Structure
 
