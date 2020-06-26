@@ -23,12 +23,14 @@ Suppose the interest region is a square only.
 
 ### Compile
 * Compile directly
+
 Remember to change SM Version for the GPU.
 ```
 g++ -fopenmp -o MG_CPU MG_solver_CPU.cpp
 nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp -o $(BIN2) MG_solver_GPU.cu
 ```
 * Using `Makefile`
+
 Change `SMVERSION` to your GPU version.
 ```
 make
