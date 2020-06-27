@@ -203,18 +203,25 @@ void getSource(int N, double L, double *F, double min_x, double min_y){
 	double x, y;
 	int index;
 
+	getBoundary(N, L, F, min_x, min_y);
+
 	#	pragma omp parallel for private(index, x, y)
-		for(int iy = 0; iy < N; iy = iy+1){
-			for(int ix = 0; ix < N; ix = ix+1){
+	for(int iy = 0; iy < N; iy = iy+1){
+		for(int ix = 0; ix < N; ix = ix+1){
+
+			if( ix == 0 || ix == N-1 || iy == 0 || iy == N-1 ){
+				// Ignore the boundary
+			}
+			else{
 				index = ix + N * iy;
 				x = (double)ix * h + min_x;
 				y = (double)iy * h + min_y;
-	
 				// Source from the problem
-				F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);
+				F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);					
 			}
-		}
 
+		}
+	}
 }
 
 // Get the boundary of the problem Lu = f
