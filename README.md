@@ -27,7 +27,7 @@ Suppose the interest region is a square only.
 Remember to change SM Version for the GPU.
 ```
 g++ -fopenmp -o MG_CPU MG_solver_CPU.cpp
-nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp -o $(BIN2) MG_solver_GPU.cu
+nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp -o MG_GPU MG_solver_GPU.cu
 ```
 * Using `Makefile`
 
@@ -43,25 +43,40 @@ make clean
 ### Cycle Structure File
 * Rules
 
-| Nodes |             Operations             |
+| node  |             Operations             |
 |:-----:|:----------------------------------:|
 |   -1  | Smoothing and then do restriction. |
 |   0   | Use the exact solver.              |
 |   1   | Do prolongation and the smoothing. |
+| con_step |                     Operations                     |
+|:--------:|:--------------------------------------------------:|
+|    -1    | Use trigger that depends when to go to next level. |
+|     0    | Assign smoothing steps in each level manually.     |
+|    INT   | Do smoothing for this many steps at any level.     |
+| con_N |                              Operations                             |
+|:-----:|:-------------------------------------------------------------------:|
+|   0   | Assign grid size N at each level manually, and input minimum N = 1. |
+|   1   | Grid size N goes to N/2 at next level, should input minimum N.      |
+|   2   |    Grid size N goes to N-1 at next level, should input minimum N.   |
 
 `Cycle.txt`:
 ```
-(Number of Nodes)
--1
-0
-1
+(con_step) (con_N)
+(N) (N_min)
+(node)
+(node option)
+(node)
+(node option)
+(node)
+(node option)
+...
 ```
 
 ### Run
-**N**: Initial grid size
+**N_THREADS_OMP:** Number of OpenMP threads </br>
 **file_name**: Cycle Structure file
 ```
-./MG_CPU N file_name
+./MG_CPU N_THREADS_OMP file_name
 ```
 
 ### Link List Data Structure
