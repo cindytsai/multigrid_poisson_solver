@@ -94,12 +94,15 @@ int main( int argc, char *argv[] ){
 
 	// Problem interest region
 	f_read >> L >> min_x >> min_y;
+	printf("[DEBUG]: (L, min_x, min_y) = (%lf, %lf, %lf)\n", L, min_x, min_y);
 
 	// Ways we want to control smoothing step and grid size N
 	f_read >> con_step >> con_N;
+	printf("[DEBUG]: (con_step, con_N) = (%d, %d)\n", con_step, con_N);
 
 	// Input initial (maximum) N_max and coarsest grid N_min
 	f_read >> N_max >> N_min;
+	printf("[DEBUG]: (N_max, N_min) = (%d, %d)\n", N_max, N_min);
 
 	if( con_N == 1 ){
 		/*
@@ -147,6 +150,7 @@ int main( int argc, char *argv[] ){
 	while( f_read.eof() != true ){
 		
 		f_read >> node;
+		cout << "Input Node: " << node << "\n";
 		
 		/*
 		Do smoothing then do restriction
@@ -191,6 +195,8 @@ int main( int argc, char *argv[] ){
 				ptrError = cycle.Get_ptr_smoothingError();
 				memset(U, 0.0, N * N * sizeof(double));
 				doSmoothing(N, L, U, F, step, ptrError);
+
+				cout << "ptrError: " << *ptrError << "\n";
 
 				printf("          ~Smoothing~\n");
 				printf("Current Grid Size N = %d\n", N);
@@ -260,7 +266,7 @@ int main( int argc, char *argv[] ){
 		/*
 		Do prolongation and then do smoothing
 		 */
-		else if( node == -1 ){
+		else if( node == 1 ){
 			// Get the smoothing step
 			if( con_step == 0 && con_N == 0 ){
 				f_read >> step;
