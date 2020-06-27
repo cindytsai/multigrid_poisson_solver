@@ -41,26 +41,34 @@ make clean
 ```
 
 ### Cycle Structure File
-* Rules
+* **con_step**
 
-| node  |             Operations             |
-|:-----:|:----------------------------------:|
-|   -1  | Smoothing and then do restriction. |
-|   0   | Use the exact solver.              |
-|   1   | Do prolongation and the smoothing. |
 | con_step |                     Operations                     |
 |:--------:|:--------------------------------------------------:|
 |    -1    | Use trigger that depends when to go to next level. |
 |     0    | Assign smoothing steps in each level manually.     |
 |    INT   | Do smoothing for this many steps at any level.     |
+
+* **con_N**
+
 | con_N |                              Operations                             |
 |:-----:|:-------------------------------------------------------------------:|
 |   0   | Assign grid size N at each level manually, and input minimum N = 1. |
 |   1   | Grid size N goes to N/2 at next level, should input minimum N.      |
 |   2   |    Grid size N goes to N-1 at next level, should input minimum N.   |
 
+* **node**
+
+| node  |             Operations             |
+|:-----:|:----------------------------------:|
+|   -1  | Smoothing and then do restriction. |
+|   0   | Use the exact solver.              |
+|   1   | Do prolongation and the smoothing. |
+
+
 `Cycle.txt`:
 ```
+(Interest region length L) (min_x) (min_y)
 (con_step) (con_N)
 (N) (N_min)
 (node)
@@ -125,6 +133,13 @@ All of the grids are stored as 1D array, with size N x N, including the boundary
     * Approximate solution [1D-array address]: `double *U`
     * Source f [1D-array address]: `double *F`
     * Residual d [1D-array address]: `dobule *D`
+
+### Grid Addition
+* void doGridAddition: Add two Grids together `U1 + U2`, and store the result inside `double *U1`.
+  * Input Variable:
+    * Grid size: `int N`
+    * Grid 1 [1D-array address]: `double *U1`
+    * Grid 2 [1D-array address]: `double *U2`
 
 ### Smoothing
 * void doSmoothing: Change made inside `double *U`, and save the error from the latest smoothing in `double *error`.
