@@ -92,6 +92,10 @@ int main( int argc, char *argv[] ){
 		exit(1);
 	}
 
+	// Create clock
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
 	/*
 	Start to read the cycle structure
 	 */
@@ -117,6 +121,8 @@ int main( int argc, char *argv[] ){
 	double *U, *F, *D;		// U, F, D at that level
 	double *tempU;			// Temperary U after prolongation
 	double *ptrError;		// Error after smoothing step
+
+	float time_used;		// Time used by Multigrid Method
 
 	// Problem interest region
 	f_read >> L >> min_x >> min_y;
@@ -170,6 +176,9 @@ int main( int argc, char *argv[] ){
 	F = cycle.Get_F();
 	N = cycle.Get_N();
 	getSource_GPU(N, L, F, min_x, min_y);
+
+	// Start the clock
+	cudaEventRecord(start, 0);
 
 	while( f_read.eof() != true ){
 		
@@ -363,6 +372,11 @@ int main( int argc, char *argv[] ){
 
 	}
 
+	// Stop the clock, and calculate the time used
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&time_used, start, stop);
+
 	// Calculate the error of Multigrid Method, 
 	// using getSource as source term F
 	N = cycle.Get_N();
@@ -381,7 +395,8 @@ int main( int argc, char *argv[] ){
 	// Print out final result
 	printf("\n\n");
 	printf("===== Final Result =====\n");
-	printf("Error = %lf\n", MGerror);
+	printf("    Error = %lf\n", MGerror);
+	printf("Time Used = %lf (ms)\n", time_used);
 
 	// Setting output file name
 	strcpy(file_name, "");
