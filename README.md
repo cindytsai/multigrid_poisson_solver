@@ -55,6 +55,10 @@ make clean
 (node option if needed)
 ...
 ```
+* Example:
+  * ![V-cycle](/src/Vcycle.txt)
+  * ![W-cycle](/src/Wcycle.txt)
+
 
 * **Interest region length L, min_x, min_y**
 
