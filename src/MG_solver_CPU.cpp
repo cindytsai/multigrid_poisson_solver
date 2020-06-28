@@ -91,6 +91,7 @@ int main( int argc, char *argv[] ){
 	double *U, *F, *D;		// U, F, D at that level
 	double *tempU;			// Temperary U after prolongation
 	double *ptrError;		// Error after smoothing step
+	double smoothing_error = 0;		// DEBUG
 
 	// Problem interest region
 	f_read >> L >> min_x >> min_y;
@@ -145,7 +146,10 @@ int main( int argc, char *argv[] ){
 	cycle.Push_back(N_max);
 	cycle.Set_Problem(L, min_x, min_y);	// it's useless here, but yah, anyway =-=
 	F = cycle.Get_F();
+	N = cycle.Get_N();
 	getSource(N, L, F, min_x, min_y);
+
+	doPrint(N, F);
 
 	while( f_read.eof() != true ){
 		
@@ -194,14 +198,14 @@ int main( int argc, char *argv[] ){
 				F = cycle.Get_F();
 				ptrError = cycle.Get_ptr_smoothingError();
 				memset(U, 0.0, N * N * sizeof(double));
-				doSmoothing(N, L, U, F, step, ptrError);
-
-				cout << "ptrError: " << *ptrError << "\n";
+				// doSmoothing(N, L, U, F, step, ptrError); // DEBUG
+				doSmoothing(N, L, U, F, step, &smoothing_error);
 
 				printf("          ~Smoothing~\n");
 				printf("Current Grid Size N = %d\n", N);
 				printf("    Smoothing Steps = %d\n", step);
-				printf("              Error = %lf\n", *ptrError);
+				// printf("              Error = %lf\n", *ptrError); // DEBUG
+				printf("              Error = %lf\n", smoothing_error);
 
 				// Get the residual
 				D = cycle.Get_D();
@@ -324,12 +328,15 @@ int main( int argc, char *argv[] ){
 				// Smoothing
 				F = cycle.Get_F();
 				ptrError = cycle.Get_ptr_smoothingError();
-				doSmoothing(N, L, U, F, step, ptrError);
+				// doSmoothing(N, L, U, F, step, ptrError);
+				doSmoothing(N, L, U, F, step, &smoothing_error); // DEBUG
+				
 
 				printf("          ~Smoothing~\n");
 				printf("Current Grid Size N = %d\n", N);
 				printf("    Smoothing Steps = %d\n", step);
-				printf("              Error = %lf\n", *ptrError);
+				// printf("              Error = %lf\n", *ptrError); // DEBUG
+				printf("              Error = %lf\n", smoothing_error);
 			}
 			
 		}
@@ -363,102 +370,6 @@ int main( int argc, char *argv[] ){
 	doPrint2File(N, U, file_name);
 
 	printf("Output file name = %s\n", file_name);
-
-
-	// Detail settings for Multigrid Poisson Solver for now
-	// int M;
-	// int step = 1;
-	// char file_name[50];
-	// double *U, *F, *D, *D_c, *V, *V_f;
-	// double smoothing_error = 0;
-
-
-	// LinkedList* list = new LinkedList(N);
-	// double L= list->Get_L();
-	// ListNode* fine_node, * coarse_node;
-
-	// for(int ll=0; ll<len; ll++){
-	// 	if (cycle[ll]==-1){
-	// 		printf("go to coarser level\n");
-	// 		fine_node = list->Get_coarsest_node();
-	// 		N   = fine_node->Get_N();
-	// 		U 	= fine_node->Get_U();
-	// 		F 	= fine_node->Get_F();
-	// 		D 	= fine_node->Get_D();
-
-	// 		list -> Push();
-	// 		coarse_node = list->Get_coarsest_node();
-	// 		M = coarse_node->Get_N();
-
-	// 		D_c = coarse_node->Get_F();
-	// 		V 	= coarse_node->Get_U();
-	// 		// Initialize
-	// 		memset(U, 0.0, N*N*sizeof(double));
-	// 		getSource(N, L, F, 0.0, 0.0);
-
-	// 		doSmoothing(N, L, U, F, step, &smoothing_error);
-	// 		printf("smoothing error= %f\n", smoothing_error);
-	// 		getResidual(N, L, U, F, D);
-	// 		doRestriction(N, D, M, D_c);
-	// 		for(int j = 0; j < M; j = j+1){
-	// 			for(int i = 0; i < M; i = i+1){
-	// 				D_c[i+j*M] = -D_c[i+j*M];
-	// 			}
-	// 		}
-	// 	}
-
-	// 	if(cycle[ll]==0) { 
-	// 		printf("DoExactSolver\n");
-	// 		doExactSolver(M, L, V, D_c, 0.00001, 1);
-
-	// 	} 
-	
-	// 	if(cycle[ll]==1){
-	// 		printf("Go to finer level\n");
-	// 		coarse_node = list->Get_coarsest_node();
-	// 		M = coarse_node->Get_N();
-	// 		V 	= coarse_node->Get_U();
-	// 		fine_node = coarse_node->Get_prev();
-	// 		N = fine_node->Get_N();
-	// 		U = fine_node->Get_U();
-	// 		F = fine_node->Get_F();
-
-
-	// 		V_f = (double*) malloc(N * N * sizeof(double));
-
-		
-	// 		doProlongation(M, V, N, V_f);
-			
-	// 		for(int j = 0; j < N; j = j+1){
-	// 			for(int i = 0; i < N; i = i+1){
-	// 				U[i+j*N] = U[i+j*N] + V_f[i+j*N];
-	// 			}
-	// 		}
-	// 		doSmoothing(N, L, U, F, step, &smoothing_error);
-	// 		printf("smoothing error=%f\n", smoothing_error);
-	// 		free(V_f);
-	// 		list->Pop();
-
-	// 	}
-	// }
-	// D = fine_node->Get_D();
-
-	// getResidual(N, L, U, F, D);
-	// double error=0;
-
-	// for(int j=0; j<N; j++){
-	// 	for(int i=0; i<N; i++){
-	// 		error+=fabs(D[i+j*N]);
-	// 	}
-	// }
-	// error = error/N/N;
-
-	// printf("error = %f\n", error);
-	// strcpy(file_name, "MG_CPU_Test.txt");
-	// doPrint2File(N, U, file_name);
-
-
-	// delete list;
 
     return 0; 
 }

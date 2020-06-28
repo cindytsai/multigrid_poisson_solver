@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdlib.h>
 #include "linkedlist.h"
 
 using namespace std;
