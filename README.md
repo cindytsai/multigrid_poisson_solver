@@ -41,7 +41,29 @@ make clean
 ```
 
 ### Cycle Structure File
-* **con_step**
+
+`Cycle.txt`:
+```
+(Interest region length L) (min_x) (min_y)
+(con_step) (con_N)
+(N_max) (N_min)
+(node)
+(node option if needed)
+(node)
+(node option if needed)
+(node)
+(node option if needed)
+...
+```
+
+* **Interest region length L, min_x, min_y**
+
+|      Input Parameter     |             Description             |
+|:------------------------:|:-----------------------------------:|
+| Interest region length L | Length of the square region.        |
+|       min_x, min_y       | The lower left point of the region. |
+
+* **`con_step` Ooptions**
 
 | con_step |                     Operations                     |
 |:--------:|:--------------------------------------------------:|
@@ -49,13 +71,20 @@ make clean
 |     0    | Assign smoothing steps in each level manually.     |
 |    INT   | Do smoothing for this many steps at any level.     |
 
-* **con_N**
+* **`con_N` Options**
 
 | con_N |                              Operations                             |
 |:-----:|:-------------------------------------------------------------------:|
 |   0   | Assign grid size N at each level manually, and input minimum N = 1. |
 |   1   | Grid size N goes to N/2 at next level, should input minimum N.      |
 |   2   |    Grid size N goes to N-1 at next level, should input minimum N.   |
+
+* **N_max, N_min**
+
+| Input Parameter |                           Description                           |
+|:---------------:|:---------------------------------------------------------------:|
+|      N_max      | Initialize grid size, or maximum grid size for auto generate N. |
+|      N_min      | Minimum grid size.                                              |
 
 * **node**
 
@@ -65,20 +94,32 @@ make clean
 |   0   | Use the exact solver.              |
 |   1   | Do prolongation and the smoothing. |
 
-
-`Cycle.txt`:
-```
-(Interest region length L) (min_x) (min_y)
-(con_step) (con_N)
-(N) (N_min)
-(node)
-(node option)
-(node)
-(node option)
-(node)
-(node option)
-...
-```
+<table class="egt">
+  <tr>
+    <th scope="row"><b>Node Option</b></th>
+    <th><b>con_N = 0:<br>Input Manually</b></th>
+    <th><b>con_N = 1:<br>N = N / 2</b></th>
+    <th><b>con_N = 2:<br>N = N - 1</b></th>
+  </tr>
+  <tr>
+    <th><b>con_step = -1:<br>Error Trigger</b></th>
+    <td>next_N</td>
+    <td>(ignore)</td>
+    <td>(ignore)</td>
+  </tr>
+  <tr>
+    <th><b>con_step = 0:<br>Input Manually</b></th>
+    <td>step next_N</td>
+    <td>step</td>
+    <td>step</td>
+  </tr>
+  <tr>
+    <th><b>con_step = INT:<br>Steps</b></th>
+    <td>next_N</td>
+    <td>(ignore)</td>
+    <td>(ignore)</td>
+  </tr>
+</table>
 
 ### Run
 **N_THREADS_OMP:** Number of OpenMP threads </br>
@@ -251,6 +292,19 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
     * Approximate solution [1D-array address]: `float *U`
     * Source f [1D-array address]: `float *F`
     * Residual d [1D-array address]: `float *D`
+
+### Grid Addition
+* void doGridAddition_GPU: Add two Grids together `U1 + U2`, and store the result inside `double *U1`.
+  * Input Variable:
+    * Grid size: `int N`
+    * Grid 1 [1D-array address]: `double *U1`
+    * Grid 2 [1D-array address]: `double *U2`
+
+* \_\_global\_\_ void ker_GridAddition_GPU: Add two Grids together `U1 + U2`, and store the result inside `float *U1`.
+  * Input Variable:
+    * Grid size: `int N`
+    * Grid 1 [1D-array address]: `float *U1`
+    
 
 ### Smoothing
 * void doSmoothing_GPU: Change made inside `double *U`, and save the error from the latest smoothing in `double *error`.
