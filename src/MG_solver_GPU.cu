@@ -811,7 +811,8 @@ __global__ void ker_Error_GPU_Single(int N, float h, float *U, float *F, float *
 }
 
 __global__ void ker_Zoom_GPU(int N, float h_n, int M, float h_m, float *U_m){
-
+	// Texture memory
+	// texMem_float1 -> U_n
 	int index_m = blockDim.x * blockIdx.x + threadIdx.x;
 	int index_n;
 	int ix_m, iy_m;

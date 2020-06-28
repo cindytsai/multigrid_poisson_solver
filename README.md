@@ -295,9 +295,9 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
   * Input Variable:
     * Grid size: `int N`
     * delta x: `float h`
-    * Approximate solution [1D-array address]: `float *U`
-    * Source f [1D-array address]: `float *F`
     * Residual d [1D-array address]: `float *D`
+  * **NOTES:**
+    1. Bind `float *U` and `float *F` to texture memory, so need to pass the variable to the kernel.
 
 ### Grid Addition
 * void doGridAddition_GPU: Add two Grids together `U1 + U2`, and store the result inside `double *U1`.
@@ -337,10 +337,10 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
     * delta x: `float h`
     * Approximate solution [1D-array address]: `float *U`
     * U_old [1D-array addreses]: `float *U0`
-    * Source f [1D-array address]: `float *F`
     * Current numbers of iterations: `int iter`
     * Error array [1D-array address]: `float *err`
   * **NOTES:**
+    * Bind `float *F` to texture memory.
     * Changes made after `step` steps
       * If `step` is odd  :  get `d_U`
       * If `step` is even :  get `d_U0`
@@ -448,8 +448,8 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
   * Input Variable:
     * Grid size before zooming: `int N`
     * Spacing between points before zooming: `float h_n`
+    * Grid size after zooming: `int M`    
     * Spacing between points after zooming: `float h_m`
-    * Grid size after zooming: `int M`
     * Result of the grid: `float *U_m`
   * **NOTES:**
     1. The grid before zooming is binded to the texture memory, so no need to pass in the pointer to the kernel.
