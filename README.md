@@ -310,6 +310,8 @@ Originally, I use `double precision` for `doExactSolver_GPU`, but it turns out t
   * Input Variable:
     * Grid size: `int N`
     * Grid 1 [1D-array address]: `float *U1`
+  * **NOTES:**
+    1. Bind `float *U2` to texture memory, so need to pass the variable to the kernel.
     
 
 ### Smoothing
