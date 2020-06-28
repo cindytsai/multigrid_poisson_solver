@@ -149,7 +149,7 @@ int main( int argc, char *argv[] ){
 	N = cycle.Get_N();
 	getSource(N, L, F, min_x, min_y);
 
-	doPrint(N, F);
+	// doPrint(N, F);
 
 	while( f_read.eof() != true ){
 		
@@ -264,7 +264,7 @@ int main( int argc, char *argv[] ){
 			if(exactSolverOption == 1){
 				printf("   Use Exact Solver = GaussSeidel Even / Odd\n");
 			}
-			printf("       Target Error = %lf\n", exactSolverTargetError);
+			printf("       Target Error = %.3e\n", exactSolverTargetError);
 
 		}
 		/*
