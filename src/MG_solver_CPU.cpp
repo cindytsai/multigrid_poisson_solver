@@ -6,12 +6,9 @@
 #include <assert.h>
 #include <string.h>
 #include <fstream>
-#include "LinkList.h"
+#include "linkedlist.h"
 
 using namespace std;
-
-#define N_THREADS_OMP 4
-
 
 /*
 For problem to be solved
@@ -23,6 +20,7 @@ MultiGrid Functions
  */
 // Main Function
 void getResidual(int, double, double*, double*, double*);
+void doGridAddition(int, double*, double*);
 void doSmoothing(int, double, double*, double*, int, double*);
 void doExactSolver(int, double, double*, double*, double, int);
 void doRestriction(int, double*, int, double*);
@@ -34,161 +32,336 @@ void doPrint2File(int, double*, char*);
 void InverseMatrix(int, double, double*, double*);
 void GaussSeidel(int, double, double*, double*, double);
 
-
 int main( int argc, char *argv[] ){
-
-	omp_set_num_threads( N_THREADS_OMP );
-    
     /*
-	Settings of testing different cycle and different grid size N
 	
-		$ ./MG_CPU N cycle_filename.txt
-	                 N:     Initial Grid size
+	Settings of testing different cycle and different numbers of OpenMP threads
+	
+		$ ./MG_CPU (N_THREADS_OMP) (cycle_filename.txt)
+
+	     N_THREADS_OMP:     Number of OpenMP threads
 	cycle_filename.txt:     The cycle structure
-	 */
-	ifstream f_read;
-	int len;
-	int len_count = 0;
-	int *cycle;
-	int N;
 	
+	 */
+	int N_THREADS_OMP;		// OpenMP threads
+	ifstream f_read;		// Read cycle structure file
+	char file_name[50];
+
 	if( argc != 3){
-		printf("Wrong input parameter.\n");
+		printf("[ ERROR ]: Wrong input numbers of parameter.\n");
 		exit(1);
 	}
-	else{
 
-		N = atoi(argv[1]);
-		f_read.open(argv[2]);
+	// Set OpenMP thread
+	N_THREADS_OMP = atoi(argv[1]);
+	omp_set_num_threads( N_THREADS_OMP );
+	printf("OpenMP threads = %d\n", N_THREADS_OMP);
 
-		printf("      Initial Grid Size N = %d\n", N);
-		printf("Cycle structure file name = %s\n", argv[2]);
-		
-		if( f_read.is_open() != true ){
-			printf("Cannot open file %s\n", argv[2]);
-			exit(1);
-		}
-		else{
-			/*
-			Start to read the cycle structure
-			 */
-			// Length of the cycle
-			f_read >> len;
-			printf("Cycle Length = %d\n", len);
-			cycle = (int*) malloc(len * sizeof(int));
-			
-			while( f_read.eof() != true ){
-
-				if(len_count >= len){
-					printf("Wrong number of the cycle structure.\n");
-					exit(1);
-				}				
-				
-				f_read >> cycle[len_count];
-				len_count = len_count + 1;
-				cout << len_count << "\n";
-			}
-		}
-
-	}
-
-	//int len = 11;
-	//int cycle[len]={-1,-1,-1,-1,-1,0,1,1,1,1,1};
-
-	// Detail settings for Multigrid Poisson Solver for now
-	int M;
-	int step = 1;
-	char file_name[50];
-	double *U, *F, *D, *D_c, *V, *V_f;
-	double smoothing_error = 0;
-
-
-	LinkedList* list = new LinkedList(N);
-	double L= list->Get_L();
-	ListNode* fine_node, * coarse_node;
-
-	for(int ll=0; ll<len; ll++){
-		if (cycle[ll]==-1){
-			printf("go to coarser level\n");
-			fine_node = list->Get_coarsest_node();
-			N   = fine_node->Get_N();
-			U 	= fine_node->Get_U();
-			F 	= fine_node->Get_F();
-			D 	= fine_node->Get_D();
-
-			list -> Push();
-			coarse_node = list->Get_coarsest_node();
-			M = coarse_node->Get_N();
-
-			D_c = coarse_node->Get_F();
-			V 	= coarse_node->Get_U();
-			// Initialize
-			memset(U, 0.0, N*N*sizeof(double));
-			getSource(N, L, F, 0.0, 0.0);
-
-			doSmoothing(N, L, U, F, step, &smoothing_error);
-			printf("smoothing error= %f\n", smoothing_error);
-			getResidual(N, L, U, F, D);
-			doRestriction(N, D, M, D_c);
-			for(int j = 0; j < M; j = j+1){
-				for(int i = 0; i < M; i = i+1){
-					D_c[i+j*M] = -D_c[i+j*M];
-				}
-			}
-		}
-
-		if(cycle[ll]==0) { 
-			printf("DoExactSolver\n");
-			doExactSolver(M, L, V, D_c, 0.00001, 1);
-
-		} 
+	// Read cycle structure file
+	f_read.open(argv[2]);
+	printf("Cycle structure file name = %s\n", argv[2]);
 	
-		if(cycle[ll]==1){
-			printf("Go to finer level\n");
-			coarse_node = list->Get_coarsest_node();
-			M = coarse_node->Get_N();
-			V 	= coarse_node->Get_U();
-			fine_node = coarse_node->Get_prev();
-			N = fine_node->Get_N();
-			U = fine_node->Get_U();
-			F = fine_node->Get_F();
+	if( f_read.is_open() != true ){
+		printf("[ ERROR ]: Cannot open file %s\n", argv[2]);
+		exit(1);
+	}
 
+	/*
+	Start to read the cycle structure
+	 */
+	double L;				// Interest region length L
+	double min_x, min_y;	// Lower left point of the interest region
 
-			V_f = (double*) malloc(N * N * sizeof(double));
+	int con_step;			// Options to control step
+	int con_N;				// Options to control N
 
+	int N_max;				// Initial (Maximum) grid size
+	int N_min;				// Coarsest (Minimum) grid size
+	int *N_array;			// Store the auto generate N 
+	int len = 0;			// Length of the N_array
+	int len_flag = 0;		// Record location in N_array for the current level
+	LinkedList cycle;		// Store variable in each level
+	int node;				// Operation {-1, 0, 1}
+	int step;				// Step of smoothing
+	int next_N;				// Next grid size N
+	double exactSolverTargetError;	// Target error for the exact solver
+	int exactSolverOption;			// Options for the exact solver
+	
+	int N;					// Current grid size N
+	double *U, *F, *D;		// U, F, D at that level
+	double *tempU;			// Temperary U after prolongation
+	double *ptrError;		// Error after smoothing step
+
+	// Problem interest region
+	f_read >> L >> min_x >> min_y;
+	printf("[DEBUG]: (L, min_x, min_y) = (%lf, %lf, %lf)\n", L, min_x, min_y);
+
+	// Ways we want to control smoothing step and grid size N
+	f_read >> con_step >> con_N;
+	printf("[DEBUG]: (con_step, con_N) = (%d, %d)\n", con_step, con_N);
+
+	// Input initial (maximum) N_max and coarsest grid N_min
+	f_read >> N_max >> N_min;
+	printf("[DEBUG]: (N_max, N_min) = (%d, %d)\n", N_max, N_min);
+
+	if( con_N == 1 ){
+		/*
+		N = N / 2 on next level
+		 */
+		// Find length of the N_array		
+		N = N_max;
+		while( N >= N_min ){
+			len = len + 1;
+			N = N / 2;
+		}
 		
-			doProlongation(M, V, N, V_f);
-			
-			for(int j = 0; j < N; j = j+1){
-				for(int i = 0; i < N; i = i+1){
-					U[i+j*N] = U[i+j*N] + V_f[i+j*N];
-				}
+		// Allocate N_array memory
+		N_array = (int*) malloc(len * sizeof(int));
+
+		// Assign generated N
+		N = N_max;
+		for(int i = 0; i < len; i = i+1){
+			N_array[i] = N;
+			N = N / 2;
+		}
+	}
+	if( con_N == 2 ){
+		/*
+		N = N - 1 on next level
+		 */
+		// Find len and allocate memory
+		len = N_max - N_min + 1;
+		N_array = (int*) malloc(len * sizeof(int));
+
+		// Assign generated N
+		N = N_max;
+		for(int i = 0; i < len; i = i+1){
+			N_array[i] = N;
+			N = N - 1;
+		}
+	}
+
+	// Initialize the cycle
+	cycle.Push_back(N_max);
+	cycle.Set_Problem(L, min_x, min_y);	// it's useless here, but yah, anyway =-=
+	F = cycle.Get_F();
+	N = cycle.Get_N();
+	getSource(N, L, F, min_x, min_y);
+
+	while( f_read.eof() != true ){
+		
+		f_read >> node;
+		cout << "Input Node: " << node << "\n";
+		
+		/*
+		Do smoothing then do restriction
+		 */
+		if( node == -1 ){
+			// Get smoothing step, next grid size N
+			if( con_step == 0 && con_N == 0 ){
+				f_read >> step >> next_N;
 			}
-			doSmoothing(N, L, U, F, step, &smoothing_error);
-			printf("smoothing error=%f\n", smoothing_error);
-			free(V_f);
-			list->Pop();
+			if( con_step == 0 && con_N != 0 ){
+				f_read >> step;
+				next_N = N_array[len_flag + 1];
+
+				len_flag = len_flag + 1;
+			}
+			if( con_step != 0 && con_N == 0 ){
+				f_read >> next_N;
+				step = con_step;
+			}
+			if( con_step != 0 && con_N != 0 ){
+				next_N = N_array[len_flag + 1];
+				step = con_step;
+
+				len_flag = len_flag + 1;
+			}
+
+			/*
+			Smoothing and get the residual
+			 */
+			if( step == -1 ){
+				// Use error trigger
+				// TODO
+			}
+			else if( step == 0 ){
+				// Do nothing, skip smoothing
+			}
+			else{
+				// Smoothing
+				N = cycle.Get_N();
+				U = cycle.Get_U();
+				F = cycle.Get_F();
+				ptrError = cycle.Get_ptr_smoothingError();
+				memset(U, 0.0, N * N * sizeof(double));
+				doSmoothing(N, L, U, F, step, ptrError);
+
+				printf("          ~Smoothing~\n");
+				printf("Current Grid Size N = %d\n", N);
+				printf("    Smoothing Steps = %d\n", step);
+				printf("              Error = %lf\n", *ptrError);
+
+				// Get the residual
+				D = cycle.Get_D();
+				getResidual(N, L, U, F, D);
+			}
+
+			/*
+			Restriction
+			 */
+			// Do restriction on minus residual
+			if( step != 0 ){
+				// Flip the sign of D
+				#	pragma omp parallel for
+				for(int i = 0; i < N*N; i = i+1){
+					D[i] = -D[i];
+				}
+
+				// Create ListNodes for next level
+				cycle.Push_back(next_N);
+
+				// Do restriction
+				// And store at next level source term F
+				doRestriction(N, D, next_N, cycle.Get_F());
+
+				printf("             *\n");
+				printf("             |\n");
+				printf(" Restriction |\n");
+				printf("             |\n");
+				printf("             *\n");
+
+			}
+			else{
+				// Full Multigrid Method
+				// TODO
+			}
 
 		}
-	}
-	D = fine_node->Get_D();
+		/*
+		Do the exact solver
+		 */
+		else if( node == 0 ){
 
+			f_read >> exactSolverTargetError >> exactSolverOption;
+			
+			N = cycle.Get_N();
+			U = cycle.Get_U();
+			F = cycle.Get_F();
+
+			doExactSolver(N, L, U, F, exactSolverTargetError, exactSolverOption);
+
+			printf("          ~Exact Solver~\n");
+			printf("Current Grid Size N = %d\n", N);
+			if(exactSolverOption == 0){
+				printf("   Use Exact Solver = Inverse Matrix\n");
+			}
+			if(exactSolverOption == 1){
+				printf("   Use Exact Solver = GaussSeidel Even / Odd\n");
+			}
+			printf("       Target Error = %.3e\n", exactSolverTargetError);
+
+		}
+		/*
+		Do prolongation and then do smoothing
+		 */
+		else if( node == 1 ){
+			// Get the smoothing step
+			if( con_step == 0 && con_N == 0 ){
+				f_read >> step;
+			}
+			if( con_step == 0 && con_N != 0 ){
+				f_read >> step;
+				len_flag = len_flag - 1;
+			}
+			if( con_step != 0 && con_N == 0 ){
+				step = con_step;
+			}
+			if( con_step != 0 && con_N != 0 ){
+				step = con_step;
+				len_flag = len_flag - 1;
+			}
+
+			/*
+			Do prolongation
+			 */
+			// Get the grid size next_N at the previous ListNode
+			next_N = cycle.Get_prev_N();
+			N = cycle.Get_N();
+			U = cycle.Get_U();
+			tempU = (double*) malloc(next_N * next_N * sizeof(double));
+			doProlongation(N, U, next_N, tempU);
+			
+			printf("             *\n");
+			printf("             |\n");
+			printf("Prolongation |\n");
+			printf("             |\n");
+			printf("             *\n");
+
+			// Remove the lastNode of cycle
+			cycle.Remove_back();
+
+			// Add tempU to U
+			N = cycle.Get_N();
+			U = cycle.Get_U();
+			doGridAddition(N, U, tempU);
+
+			// Free tempU, it is no longer needed.
+			free(tempU);
+
+			/*
+			Do smoothing
+			 */
+			if( step == -1 ){
+				// Use error trigger
+				// TODO
+			}
+			else if( step == 0 ){
+				// Do nothing , skip smoothing
+			}
+			else{
+				// Smoothing
+				F = cycle.Get_F();
+				ptrError = cycle.Get_ptr_smoothingError();
+				doSmoothing(N, L, U, F, step, ptrError);				
+
+				printf("          ~Smoothing~\n");
+				printf("Current Grid Size N = %d\n", N);
+				printf("    Smoothing Steps = %d\n", step);
+				printf("              Error = %lf\n", *ptrError);
+			}
+			
+		}
+
+	}
+
+	// Calculate the error of Multigrid Method, 
+	// using getSource as source term F
+	N = cycle.Get_N();
+	U = cycle.Get_U();
+	D = cycle.Get_D();
+	F = cycle.Get_F();
+	getSource(N, L, F, min_x, min_y);
 	getResidual(N, L, U, F, D);
-	double error=0;
 
-	for(int j=0; j<N; j++){
-		for(int i=0; i<N; i++){
-			error+=fabs(D[i+j*N]);
-		}
+	double MGerror;
+	for(int i = 0; i < N*N; i = i+1){
+		MGerror = MGerror + fabs(D[i]);
 	}
-	error = error/N/N;
+	MGerror = MGerror / (double)(N*N);
 
-	printf("error = %f\n", error);
-	strcpy(file_name, "MG_CPU_Test.txt");
+	// Print out final result
+	printf("\n\n");
+	printf("===== Final Result =====\n");
+	printf("Error = %lf\n", MGerror);
+
+	// Setting output file name
+	strcpy(file_name, "");
+	strcat(file_name, "Sol_");
+	strcat(file_name, argv[2]);
 	doPrint2File(N, U, file_name);
 
-
-	delete list;
+	printf("Output file name = %s\n", file_name);
 
     return 0; 
 }
@@ -203,18 +376,25 @@ void getSource(int N, double L, double *F, double min_x, double min_y){
 	double x, y;
 	int index;
 
+	getBoundary(N, L, F, min_x, min_y);
+
 	#	pragma omp parallel for private(index, x, y)
-		for(int iy = 0; iy < N; iy = iy+1){
-			for(int ix = 0; ix < N; ix = ix+1){
+	for(int iy = 0; iy < N; iy = iy+1){
+		for(int ix = 0; ix < N; ix = ix+1){
+
+			if( ix == 0 || ix == N-1 || iy == 0 || iy == N-1 ){
+				// Ignore the boundary
+			}
+			else{
 				index = ix + N * iy;
 				x = (double)ix * h + min_x;
 				y = (double)iy * h + min_y;
-	
 				// Source from the problem
-				F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);
+				F[index] = 2.0 * x * (y - 1) * (y - 2.0 * x + x * y + 2.0) * exp(x - y);					
 			}
-		}
 
+		}
+	}
 }
 
 // Get the boundary of the problem Lu = f
@@ -245,8 +425,6 @@ void getBoundary(int N, double L, double *F, double min_x, double min_y){
 		}
 		#	pragma omp barrier
 	}
-
-
 }
 
 /*
@@ -263,6 +441,13 @@ void getResidual(int N, double L, double* U, double* F, double* D){
 		}
 	}
 #	pragma omp barrier
+}
+
+void doGridAddition(int N, double *U1, double *U2){
+	#	pragma omp parallel for
+	for(int i = 0; i < N*N; i = i+1){
+		U1[i] = U1[i] + U2[i];
+	}
 }
 
 void doSmoothing(int N, double L, double* U, double* F, int step, double* error){
