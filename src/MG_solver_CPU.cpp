@@ -91,7 +91,6 @@ int main( int argc, char *argv[] ){
 	double *U, *F, *D;		// U, F, D at that level
 	double *tempU;			// Temperary U after prolongation
 	double *ptrError;		// Error after smoothing step
-	double smoothing_error = 0;		// DEBUG
 
 	// Problem interest region
 	f_read >> L >> min_x >> min_y;
@@ -149,8 +148,6 @@ int main( int argc, char *argv[] ){
 	N = cycle.Get_N();
 	getSource(N, L, F, min_x, min_y);
 
-	// doPrint(N, F);
-
 	while( f_read.eof() != true ){
 		
 		f_read >> node;
@@ -198,14 +195,12 @@ int main( int argc, char *argv[] ){
 				F = cycle.Get_F();
 				ptrError = cycle.Get_ptr_smoothingError();
 				memset(U, 0.0, N * N * sizeof(double));
-				// doSmoothing(N, L, U, F, step, ptrError); // DEBUG
-				doSmoothing(N, L, U, F, step, &smoothing_error);
+				doSmoothing(N, L, U, F, step, ptrError);
 
 				printf("          ~Smoothing~\n");
 				printf("Current Grid Size N = %d\n", N);
 				printf("    Smoothing Steps = %d\n", step);
-				// printf("              Error = %lf\n", *ptrError); // DEBUG
-				printf("              Error = %lf\n", smoothing_error);
+				printf("              Error = %lf\n", *ptrError);
 
 				// Get the residual
 				D = cycle.Get_D();
@@ -328,15 +323,12 @@ int main( int argc, char *argv[] ){
 				// Smoothing
 				F = cycle.Get_F();
 				ptrError = cycle.Get_ptr_smoothingError();
-				// doSmoothing(N, L, U, F, step, ptrError);
-				doSmoothing(N, L, U, F, step, &smoothing_error); // DEBUG
-				
+				doSmoothing(N, L, U, F, step, ptrError);				
 
 				printf("          ~Smoothing~\n");
 				printf("Current Grid Size N = %d\n", N);
 				printf("    Smoothing Steps = %d\n", step);
-				// printf("              Error = %lf\n", *ptrError); // DEBUG
-				printf("              Error = %lf\n", smoothing_error);
+				printf("              Error = %lf\n", *ptrError);
 			}
 			
 		}
