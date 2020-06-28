@@ -94,15 +94,12 @@ int main( int argc, char *argv[] ){
 
 	// Problem interest region
 	f_read >> L >> min_x >> min_y;
-	printf("[DEBUG]: (L, min_x, min_y) = (%lf, %lf, %lf)\n", L, min_x, min_y);
 
 	// Ways we want to control smoothing step and grid size N
 	f_read >> con_step >> con_N;
-	printf("[DEBUG]: (con_step, con_N) = (%d, %d)\n", con_step, con_N);
 
 	// Input initial (maximum) N_max and coarsest grid N_min
 	f_read >> N_max >> N_min;
-	printf("[DEBUG]: (N_max, N_min) = (%d, %d)\n", N_max, N_min);
 
 	if( con_N == 1 ){
 		/*
@@ -151,7 +148,10 @@ int main( int argc, char *argv[] ){
 	while( f_read.eof() != true ){
 		
 		f_read >> node;
-		cout << "Input Node: " << node << "\n";
+
+		if( node == 2 ){
+			break;
+		}
 		
 		/*
 		Do smoothing then do restriction
