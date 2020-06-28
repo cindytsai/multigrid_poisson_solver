@@ -93,6 +93,8 @@ make clean
 |   -1  | Smoothing and then do restriction. |
 |   0   | Use the exact solver.              |
 |   1   | Do prolongation and the smoothing. |
+|   2   | End of the file, break the loop.   |
+
 
 <table class="egt">
   <tr>
@@ -122,11 +124,15 @@ make clean
 </table>
 
 ### Run
-**N_THREADS_OMP:** Number of OpenMP threads </br>
-**file_name**: Cycle Structure file
+
 ```
 ./MG_CPU N_THREADS_OMP file_name
 ```
+
+| Input Parameter |        Description        |
+|:---------------:|:-------------------------:|
+| N\_THREADS\_OMP | Number of OpenMP threads. |
+|    file_name    | Cycle Structure file.     |
 
 ### Link List Data Structure
 
