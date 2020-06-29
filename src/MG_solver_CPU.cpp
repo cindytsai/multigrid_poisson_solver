@@ -92,7 +92,7 @@ int main( int argc, char *argv[] ){
 	double *tempU;			// Temperary U after prolongation
 	double *ptrError;		// Error after smoothing step
 
-	double TRIGGER = 0.0001;// error trigger, when slope is smaller than this value per step
+	double TRIGGER = 0.01;	// error trigger, when slope is smaller than this value per step
 							// breaks the loop
 
 	// Problem interest region
@@ -220,7 +220,11 @@ int main( int argc, char *argv[] ){
 				printf("          ~Smoothing~\n");
 				printf("Current Grid Size N = %d\n", N);
 				printf("    Smoothing Steps = %d\n", *ptrNodeStep);
-				printf("              Error = %lf\n", *ptrError);				
+				printf("              Error = %lf\n", *ptrError);
+
+				// Get the residual
+				D = cycle.Get_D();
+				getResidual(N, L, U, F, D);
 			}
 			else if( step == 0 ){
 				// Do nothing, skip smoothing
