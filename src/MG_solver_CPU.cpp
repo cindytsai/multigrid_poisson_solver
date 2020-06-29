@@ -15,6 +15,7 @@ For problem to be solved
  */
 void getSource(int, double, double*, double, double);
 void getBoundary(int, double, double*, double, double);
+void getAnalytic(int, double, double*, double, double);
 /*
 MultiGrid Functions
  */
@@ -415,18 +416,18 @@ int main( int argc, char *argv[] ){
 	stop = omp_get_wtime();
 	time_used = stop - start;
 
-	// Calculate the error of Multigrid Method, 
-	// using getSource as source term F
+	// Calculate the error of Multigrid Method
+	// Using getAnalytic
+	double *anaU;
+
 	N = cycle.Get_N();
 	U = cycle.Get_U();
-	D = cycle.Get_D();
-	F = cycle.Get_F();
-	getSource(N, L, F, min_x, min_y);
-	getResidual(N, L, U, F, D);
+	anaU = (double*) malloc(N * N * sizeof(double));	
+	getAnalytic(N, L, anaU, min_x, min_y);
 
-	double MGerror;
+	double MGerror = 0.0;
 	for(int i = 0; i < N*N; i = i+1){
-		MGerror = MGerror + fabs(D[i]);
+		MGerror = MGerror + fabs(anaU[i] - U[i]);
 	}
 	MGerror = MGerror / (double)(N*N);
 
@@ -506,6 +507,31 @@ void getBoundary(int N, double L, double *F, double min_x, double min_y){
 			F[(N - 1) + N * iy] = 0.0;
 		}
 		#	pragma omp barrier
+	}
+}
+
+void getAnalytic(int N, double L, double *U, double min_x, double min_y){
+
+	double h = L / (double) (N-1);
+	double x, y;
+	int index;
+
+	getBoundary(N, L, U, min_x, min_y);
+
+	#	pragma omp parallel for private(index, x, y)
+	for(int iy = 0; iy < N; iy = iy+1){
+		for(int ix = 0; ix < N; ix = ix+1){
+			if( ix == 0 || ix == N-1 || iy == 0 || iy == N-1 ){
+				// Ignore the boundary
+			}
+			else{
+				index = ix + N * iy;
+				x = (double)ix * h + min_x;
+				y = (double)iy * h + min_y;
+				// Analytic Solution of the problem
+				U[index] = exp(x - y) * x * (1.0 - x) * y * (1.0 - y);
+			}
+		}
 	}
 }
 

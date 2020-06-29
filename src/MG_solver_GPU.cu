@@ -30,6 +30,8 @@ Wrap the GPU kernel as CPU function
 // Main Function
 void getSource_GPU(int, double, double*, double, double);
 void getResidual_GPU(int, double, double*, double*, double*);
+void getBoundary(int, double, double*, double, double);
+void getAnalytic(int, double, double*, double, double);
 void doGridAddition_GPU(int, double*, double*);
 void doSmoothing_GPU(int, double, double*, double*, int, double*);
 void doExactSolver_GPU(int, double, double*, double*, double, int);
@@ -447,18 +449,18 @@ int main( int argc, char *argv[] ){
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&time_used, start, stop);
 
-	// Calculate the error of Multigrid Method, 
-	// using getSource as source term F
+	// Calculate the error of Multigrid Method
+	// Using getAnalytic
+	double *anaU;
+
 	N = cycle.Get_N();
 	U = cycle.Get_U();
-	D = cycle.Get_D();
-	F = cycle.Get_F();
-	getSource_GPU(N, L, F, min_x, min_y);
-	getResidual_GPU(N, L, U, F, D);
+	anaU = (double*) malloc(N * N * sizeof(double));	
+	getAnalytic(N, L, anaU, min_x, min_y);
 
-	double MGerror;
+	double MGerror = 0.0;
 	for(int i = 0; i < N*N; i = i+1){
-		MGerror = MGerror + fabs(D[i]);
+		MGerror = MGerror + fabs(anaU[i] - U[i]);
 	}
 	MGerror = MGerror / (double)(N*N);
 
@@ -975,6 +977,61 @@ void getSource_GPU(int N, double L, double *F, double min_x, double min_y){
 	}
 
 	free(h_F);
+}
+
+// Get the boundary of the problem Lu = f
+// Changes made in F on the boundary only, the others will initialized as 0.
+void getBoundary(int N, double L, double *F, double min_x, double min_y){
+	double h = L / (double) (N-1);
+	double x, y;
+	int index;
+
+	memset(F, 0.0, N * N * sizeof(double));
+
+	#	pragma omp parallel private(index, x, y)
+	{
+		#	pragma omp for nowait
+		for(int ix = 0; ix < N; ix = ix+1){
+			// Bottom boundary
+			F[ix] = 0.0;
+			// Top boundary
+			F[ix + N * (N - 1)] = 0.0;
+		}
+
+		#	pragma omp for
+		for(int iy = 0; iy < N; iy = iy+1){
+			// Left boundary
+			F[N * iy] = 0.0;
+			// Right boundary
+			F[(N - 1) + N * iy] = 0.0;
+		}
+		#	pragma omp barrier
+	}
+}
+
+void getAnalytic(int N, double L, double *U, double min_x, double min_y){
+
+	double h = L / (double) (N-1);
+	double x, y;
+	int index;
+
+	getBoundary(N, L, U, min_x, min_y);
+
+	#	pragma omp parallel for private(index, x, y)
+	for(int iy = 0; iy < N; iy = iy+1){
+		for(int ix = 0; ix < N; ix = ix+1){
+			if( ix == 0 || ix == N-1 || iy == 0 || iy == N-1 ){
+				// Ignore the boundary
+			}
+			else{
+				index = ix + N * iy;
+				x = (double)ix * h + min_x;
+				y = (double)iy * h + min_y;
+				// Analytic Solution of the problem
+				U[index] = exp(x - y) * x * (1.0 - x) * y * (1.0 - y);
+			}
+		}
+	}
 }
 
 void getResidual_GPU(int N, double L, double *U, double *F, double *D){
