@@ -92,6 +92,9 @@ int main( int argc, char *argv[] ){
 	double *tempU;			// Temperary U after prolongation
 	double *ptrError;		// Error after smoothing step
 
+	double TRIGGER = 0.0001;// error trigger, when slope is smaller than this value per step
+							// breaks the loop
+
 	// Problem interest region
 	f_read >> L >> min_x >> min_y;
 
@@ -182,8 +185,42 @@ int main( int argc, char *argv[] ){
 			Smoothing and get the residual
 			 */
 			if( step == -1 ){
-				// Use error trigger
-				// TODO
+				// Use the Error Trigger
+				double slope = TRIGGER + 1.0;
+				int *ptrNodeStep;
+				double tempError = 0;
+
+				// Get N, U, F at current level
+				N = cycle.Get_N();
+				U = cycle.Get_U();
+				F = cycle.Get_F();
+				ptrError = cycle.Get_ptr_smoothingError();
+				ptrNodeStep = cycle.Get_ptr_step();
+				*ptrNodeStep = 0;
+
+				// Initialize U
+				memset(U, 0.0, N * N * sizeof(double));
+
+				while( slope > TRIGGER ){
+					// Smoothing
+					doSmoothing(N, L, U, F, 1, ptrError);
+					*ptrNodeStep = *ptrNodeStep + 1;
+
+					// Calculate the error slope, and ignore the first step
+					if( *ptrNodeStep == 1 ){
+						tempError = *ptrError;
+						continue;
+					}
+
+					// Calculate the slope if *ptrNodeStep > 1
+					slope = fabs( *ptrError - tempError );
+					tempError = *ptrError;
+				}
+
+				printf("          ~Smoothing~\n");
+				printf("Current Grid Size N = %d\n", N);
+				printf("    Smoothing Steps = %d\n", *ptrNodeStep);
+				printf("              Error = %lf\n", *ptrError);				
 			}
 			else if( step == 0 ){
 				// Do nothing, skip smoothing
@@ -313,8 +350,37 @@ int main( int argc, char *argv[] ){
 			Do smoothing
 			 */
 			if( step == -1 ){
-				// Use error trigger
-				// TODO
+				// Use the Error Trigger
+				double slope = TRIGGER + 1.0;
+				int *ptrNodeStep;
+				double tempError = 0;
+
+				// Get F at current level
+				F = cycle.Get_F();
+				ptrError = cycle.Get_ptr_smoothingError();
+				ptrNodeStep = cycle.Get_ptr_step();
+				*ptrNodeStep = 0;
+
+				while( slope > TRIGGER ){
+					// Smoothing
+					doSmoothing(N, L, U, F, 1, ptrError);
+					*ptrNodeStep = *ptrNodeStep + 1;
+
+					// Calculate the error slope, and ignore the first step
+					if( *ptrNodeStep == 1 ){
+						tempError = *ptrError;
+						continue;
+					}
+
+					// Calculate the slope if *ptrNodeStep > 1
+					slope = fabs( *ptrError - tempError );
+					tempError = *ptrError;
+				}
+
+				printf("          ~Smoothing~\n");
+				printf("Current Grid Size N = %d\n", N);
+				printf("    Smoothing Steps = %d\n", *ptrNodeStep);
+				printf("              Error = %lf\n", *ptrError);
 			}
 			else if( step == 0 ){
 				// Do nothing , skip smoothing
