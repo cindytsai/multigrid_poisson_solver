@@ -26,8 +26,8 @@ Suppose the interest region is a square only.
 
 Remember to change SM Version for the GPU.
 ```
-g++ -fopenmp -o MG_CPU MG_solver_CPU.cpp
-nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp -o MG_GPU MG_solver_GPU.cu
+g++ -fopenmp -o MG_CPU MG_solver_CPU.cpp linkedlist.cpp
+nvcc -arch=compute_52 -code=sm_52 -O3 --compiler-options -fopenmp -o MG_GPU MG_solver_GPU.cu linkedlist.cpp
 ```
 * Using `Makefile`
 

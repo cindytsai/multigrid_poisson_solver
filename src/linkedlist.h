@@ -45,6 +45,7 @@ public:
 	double* Get_F();					// Get F of the lastNode
 	int Get_N();						// Get grid size N of the lastNode
 	double* Get_ptr_smoothingError();	// Get the address of smoothingError of the lastNode
+	int* Get_ptr_step();				//	Get the address of step of the lastNode
 	int Get_prev_N();					// Get the N at the previous node of the lastNode
 };
 

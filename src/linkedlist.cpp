@@ -12,6 +12,7 @@ ListNode::ListNode(int n){
 	nextNode = 0;
 	prevNode = 0;
 	smoothingError = 0;
+	step = 0;
 }
 
 LinkedList::~LinkedList(){
@@ -87,6 +88,10 @@ int LinkedList::Get_N(){
 
 double* LinkedList::Get_ptr_smoothingError(){
     return &(lastNode -> smoothingError);
+}
+
+int* LinkedList::Get_ptr_step(){
+	return &(lastNode -> step);
 }
 
 int LinkedList::Get_prev_N(){
