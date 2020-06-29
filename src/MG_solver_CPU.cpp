@@ -92,6 +92,9 @@ int main( int argc, char *argv[] ){
 	double *tempU;			// Temperary U after prolongation
 	double *ptrError;		// Error after smoothing step
 
+	double time_used;
+	double start, stop;
+
 	double TRIGGER = 0.01;	// error trigger, when slope is smaller than this value per step
 							// breaks the loop
 
@@ -147,6 +150,9 @@ int main( int argc, char *argv[] ){
 	F = cycle.Get_F();
 	N = cycle.Get_N();
 	getSource(N, L, F, min_x, min_y);
+
+	// Start the clock
+	start = omp_get_wtime();
 
 	while( f_read.eof() != true ){
 		
@@ -405,6 +411,10 @@ int main( int argc, char *argv[] ){
 
 	}
 
+	// Stop the clock, and calculate the time used
+	stop = omp_get_wtime();
+	time_used = stop - start;
+
 	// Calculate the error of Multigrid Method, 
 	// using getSource as source term F
 	N = cycle.Get_N();
@@ -423,11 +433,12 @@ int main( int argc, char *argv[] ){
 	// Print out final result
 	printf("\n\n");
 	printf("===== Final Result =====\n");
-	printf("Error = %lf\n", MGerror);
+	printf("    Error = %lf\n", MGerror);
+	printf("Time Used = %lf (ms)\n", 1000 * time_used);
 
 	// Setting output file name
 	strcpy(file_name, "");
-	strcat(file_name, "Sol_");
+	strcat(file_name, "Sol_CPU_");
 	strcat(file_name, argv[2]);
 	doPrint2File(N, U, file_name);
 
