@@ -14,7 +14,7 @@ private:
 
 	// For smoothing Node
 	int step;						// Number of step to do smoothing
-	double smoothingError = 0;		// Error after "step" of smoothing
+	double smoothingError;			// Error after "step" of smoothing
 
 	// For Exact Solver Node
 	int option;						// Choose the exact solver

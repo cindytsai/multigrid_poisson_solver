@@ -11,6 +11,7 @@ ListNode::ListNode(int n){
 	D = (double*) malloc(N * N * sizeof(double));
 	nextNode = 0;
 	prevNode = 0;
+	smoothingError = 0;
 }
 
 LinkedList::~LinkedList(){
