@@ -435,7 +435,7 @@ int main( int argc, char *argv[] ){
 	// printf("===== Final Result =====\n");
 	// printf("    Error = %lf\n", MGerror);
 	// printf("Time Used = %lf (ms)\n", 1000 * time_used);
-	printf("%.5e %d %.5e %d\n", MGerror, N, time_used, N_THREADS_OMP);
+	printf("%.5e %d %.5e %d\n", MGerror, N, time_used, N_THREADS_OMP); // time(sec)
 
 	// Setting output file name
 	strcpy(file_name, "");
