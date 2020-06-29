@@ -81,11 +81,11 @@ int main( int argc, char *argv[] ){
 	// Set OpenMP thread
 	N_THREADS_OMP = atoi(argv[1]);
 	omp_set_num_threads( N_THREADS_OMP );
-	printf("OpenMP threads = %d\n", N_THREADS_OMP);
+	// printf("OpenMP threads = %d\n", N_THREADS_OMP);
 
 	// Read cycle structure file
 	f_read.open(argv[2]);
-	printf("Cycle structure file name = %s\n", argv[2]);
+	// printf("Cycle structure file name = %s\n", argv[2]);
 	
 	if( f_read.is_open() != true ){
 		printf("[ ERROR ]: Cannot open file %s\n", argv[2]);
@@ -252,10 +252,10 @@ int main( int argc, char *argv[] ){
 					tempError = *ptrError;
 				}
 
-				printf("          ~Smoothing~\n");
-				printf("Current Grid Size N = %d\n", N);
-				printf("    Smoothing Steps = %d\n", *ptrNodeStep);
-				printf("              Error = %lf\n", *ptrError);
+				// printf("          ~Smoothing~\n");
+				// printf("Current Grid Size N = %d\n", N);
+				// printf("    Smoothing Steps = %d\n", *ptrNodeStep);
+				// printf("              Error = %lf\n", *ptrError);
 
 				// Get the residual
 				D = cycle.Get_D();
@@ -273,10 +273,10 @@ int main( int argc, char *argv[] ){
 				memset(U, 0.0, N * N * sizeof(double));
 				doSmoothing_GPU(N, L, U, F, step, ptrError);
 
-				printf("          ~Smoothing~\n");
-				printf("Current Grid Size N = %d\n", N);
-				printf("    Smoothing Steps = %d\n", step);
-				printf("              Error = %lf\n", *ptrError);
+				// printf("          ~Smoothing~\n");
+				// printf("Current Grid Size N = %d\n", N);
+				// printf("    Smoothing Steps = %d\n", step);
+				// printf("              Error = %lf\n", *ptrError);
 
 				// Get the residual
 				D = cycle.Get_D();
@@ -301,11 +301,11 @@ int main( int argc, char *argv[] ){
 				// And store at next level source term F
 				doRestriction_GPU(N, D, next_N, cycle.Get_F());
 
-				printf("             *\n");
-				printf("             |\n");
-				printf(" Restriction |\n");
-				printf("             |\n");
-				printf("             *\n");
+				// printf("             *\n");
+				// printf("             |\n");
+				// printf(" Restriction |\n");
+				// printf("             |\n");
+				// printf("             *\n");
 
 			}
 			else{
@@ -327,17 +327,17 @@ int main( int argc, char *argv[] ){
 
 			doExactSolver_GPU(N, L, U, F, exactSolverTargetError, exactSolverOption);
 
-			printf("          ~Exact Solver~\n");
-			printf("Current Grid Size N = %d\n", N);
-			if(exactSolverOption == 1){
-				printf("   Use Exact Solver = GaussSeidel Even / Odd \n");
-				printf("                      with double precision\n");
-			}
-			if(exactSolverOption == 2){
-				printf("   Use Exact Solver = GaussSeidel Even / Odd \n");
-				printf("                      with single precision\n");
-			}
-			printf("       Target Error = %.3e\n", exactSolverTargetError);
+			// printf("          ~Exact Solver~\n");
+			// printf("Current Grid Size N = %d\n", N);
+			// if(exactSolverOption == 1){
+			// 	printf("   Use Exact Solver = GaussSeidel Even / Odd \n");
+			// 	printf("                      with double precision\n");
+			// }
+			// if(exactSolverOption == 2){
+			// 	printf("   Use Exact Solver = GaussSeidel Even / Odd \n");
+			// 	printf("                      with single precision\n");
+			// }
+			// printf("       Target Error = %.3e\n", exactSolverTargetError);
 
 		}
 		/*
@@ -370,11 +370,11 @@ int main( int argc, char *argv[] ){
 			tempU = (double*) malloc(next_N * next_N * sizeof(double));
 			doProlongation_GPU(N, U, next_N, tempU);
 			
-			printf("             *\n");
-			printf("             |\n");
-			printf("Prolongation |\n");
-			printf("             |\n");
-			printf("             *\n");
+			// printf("             *\n");
+			// printf("             |\n");
+			// printf("Prolongation |\n");
+			// printf("             |\n");
+			// printf("             *\n");
 
 			// Remove the lastNode of cycle
 			cycle.Remove_back();
@@ -418,10 +418,10 @@ int main( int argc, char *argv[] ){
 					tempError = *ptrError;
 				}
 
-				printf("          ~Smoothing~\n");
-				printf("Current Grid Size N = %d\n", N);
-				printf("    Smoothing Steps = %d\n", *ptrNodeStep);
-				printf("              Error = %lf\n", *ptrError);
+				// printf("          ~Smoothing~\n");
+				// printf("Current Grid Size N = %d\n", N);
+				// printf("    Smoothing Steps = %d\n", *ptrNodeStep);
+				// printf("              Error = %lf\n", *ptrError);
 			}
 			else if( step == 0 ){
 				// Do nothing , skip smoothing
@@ -432,10 +432,10 @@ int main( int argc, char *argv[] ){
 				ptrError = cycle.Get_ptr_smoothingError();
 				doSmoothing_GPU(N, L, U, F, step, ptrError);				
 
-				printf("          ~Smoothing~\n");
-				printf("Current Grid Size N = %d\n", N);
-				printf("    Smoothing Steps = %d\n", step);
-				printf("              Error = %lf\n", *ptrError);
+				// printf("          ~Smoothing~\n");
+				// printf("Current Grid Size N = %d\n", N);
+				// printf("    Smoothing Steps = %d\n", step);
+				// printf("              Error = %lf\n", *ptrError);
 			}
 			
 		}
@@ -463,10 +463,11 @@ int main( int argc, char *argv[] ){
 	MGerror = MGerror / (double)(N*N);
 
 	// Print out final result
-	printf("\n\n");
-	printf("===== Final Result =====\n");
-	printf("    Error = %lf\n", MGerror);
-	printf("Time Used = %lf (ms)\n", time_used);
+	// printf("\n\n");
+	// printf("===== Final Result =====\n");
+	// printf("    Error = %lf\n", MGerror);
+	// printf("Time Used = %lf (ms)\n", time_used);
+	printf("%.5e %d %.5e %d\n", MGerror, N, time_used, N_THREADS_OMP);
 
 	// Setting output file name
 	strcpy(file_name, "");
@@ -474,7 +475,7 @@ int main( int argc, char *argv[] ){
 	strcat(file_name, argv[2]);
 	doPrint2File(N, U, file_name);
 
-	printf("Output file name = %s\n", file_name);
+	// printf("Output file name = %s\n", file_name);
 	// Reset the device
 	cudaDeviceReset();
 
