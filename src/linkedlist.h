@@ -39,6 +39,7 @@ public:
 	void Push_back(int n);
 	void Remove_back();
 	void Set_Problem(double l, double o_x, double o_y);	// Set interest region of the problem
+	void Set_init(int r);
 	double Get_L();
 	double* Get_U();					// Get U of the lastNode
 	double* Get_D();					// Get D of the lastNode
@@ -47,6 +48,7 @@ public:
 	double* Get_ptr_smoothingError();	// Get the address of smoothingError of the lastNode
 	int* Get_ptr_step();				//	Get the address of step of the lastNode
 	int Get_prev_N();					// Get the N at the previous node of the lastNode
+	bool Is_firstNode();
 };
 
 #endif

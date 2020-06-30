@@ -206,7 +206,12 @@ int main( int argc, char *argv[] ){
 				*ptrNodeStep = 0;
 
 				// Initialize U
-				memset(U, 0.0, N * N * sizeof(double));
+				if(cycle.Get_init() == 0 && cycle.Is_firstNode() == true ){
+					// Use U, more like a restart method
+				}
+				else{
+					memset(U, 0.0, N * N * sizeof(double));
+				}
 
 				while( slope > TRIGGER ){
 					// Smoothing
@@ -242,7 +247,15 @@ int main( int argc, char *argv[] ){
 				U = cycle.Get_U();
 				F = cycle.Get_F();
 				ptrError = cycle.Get_ptr_smoothingError();
-				memset(U, 0.0, N * N * sizeof(double));
+				
+				// Initialize U
+				if(cycle.Get_init() == 0 && cycle.Is_firstNode() == true ){
+					// Use U, more like a restart method
+				}
+				else{
+					memset(U, 0.0, N * N * sizeof(double));
+				}
+				
 				doSmoothing(N, L, U, F, step, ptrError);
 
 				// printf("          ~Smoothing~\n");
