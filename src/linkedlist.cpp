@@ -51,12 +51,20 @@ void LinkedList::Remove_back(){
 
 
 	if( firstNode == lastNode && firstNode != 0 ){
+		// Remove the lastNode (=firstNode), no more left
 		firstNode = 0;
 		lastNode = 0;
 	}
 	else{
+		// Remove the lastNode
 		lastNode -> prevNode -> nextNode = 0;
 		lastNode = lastNode -> prevNode;
+
+		// Check if after this removal, is there only firstNode left
+		// If yes, set init = 0
+		if( firstNode == lastNode ){
+			Set_init(0);
+		}
 	}
 }
 
@@ -96,4 +104,21 @@ int* LinkedList::Get_ptr_step(){
 
 int LinkedList::Get_prev_N(){
 	return (lastNode -> prevNode -> N);
+}
+
+int LinkedList::Get_init(){
+	return init;
+}
+
+void LinkedList::Set_init(int r){
+	init = r;
+}
+
+bool LinkedList::Is_firstNode(){
+	if( firstNode == lastNode && firstNode != 0 ){
+		return true;
+	}
+	else{
+		return false;
+	}
 }
